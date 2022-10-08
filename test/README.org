@@ -1,0 +1,10 @@
+
+* Test for mean and variance
+
+The running mean and variance algorithm implemented in [[../src/stat/meanvar.jl][meanvar.jl]] are
+tested with three datasets provided by [[http://www.nist.gov][NIST]] (the Statistical Reference
+Datasets for [[http://www.itl.nist.gov/div898/strd/univ/homepage.html][univariate summary statistics]]).  The files ~NumAcc1.dat~,
+~NumAcc2.dat~ and ~NumAcc4.dat~ are redistributed verbatim from NIST's
+website (accessed July 14, 2015) and are not covered by the GPL
+license, license but considered public information according
+to NIST's [[http://www.nist.gov/public_affairs/disclaimer.cfm][disclaimer]].
