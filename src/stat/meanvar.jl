@@ -93,6 +93,11 @@ end
 
 WMeanVar()=WMeanVar(0.,0.,0.,0)
 
+"""
+    function push!(WMV::WMeanVar,x)
+
+Add data point `x` with weight `W` to `WMeanVar` object `WMV`
+"""
 function Base.push!(MV::WMeanVar,x,w)
     nsW=MV.sumW+w
     Q::Float64=x-MV.mean
@@ -104,7 +109,9 @@ function Base.push!(MV::WMeanVar,x,w)
     return MV
 end
 
-@inline mean(MV::WMeanVar) = MV.mean
+"Compute mean estimate (sample mean) from a `WMeanVar` object"
+@inline mean(MV::MeanVar) = MV.mean
+"Compute variance estimate (population variance) from a `WMeanVar` object"
 @inline var(MV::WMeanVar) = MV.pvar*MV.N/(MV.sumW*(MV.N-1))
 
 function Base.show(io::IO,wmv::WMeanVar)
