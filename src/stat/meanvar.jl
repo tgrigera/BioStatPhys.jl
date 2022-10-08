@@ -110,7 +110,7 @@ function Base.push!(MV::WMeanVar,x,w)
 end
 
 "Compute mean estimate (sample mean) from a `WMeanVar` object"
-@inline mean(MV::MeanVar) = MV.mean
+@inline mean(MV::WMeanVar) = MV.mean
 "Compute variance estimate (population variance) from a `WMeanVar` object"
 @inline var(MV::WMeanVar) = MV.pvar*MV.N/(MV.sumW*(MV.N-1))
 
