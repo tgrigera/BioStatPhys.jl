@@ -21,7 +21,7 @@ using Test
 
 include("./stat/stest.jl")
 
-@testset "BioStatPhys/stat" begin
+@testset "BioStatPhys statistics" begin
 
     for (file,res) in test_MeanVar_dict
         m,v = test_MeanVar(file)
@@ -33,4 +33,10 @@ include("./stat/stest.jl")
         @test m≈res.mean && sqrt(v)≈res.sd
     end
 
+end
+
+include("./tool/binvectest.jl")
+
+@testset "BioStatPhys tools" begin
+    @test BinnedVector_test()
 end

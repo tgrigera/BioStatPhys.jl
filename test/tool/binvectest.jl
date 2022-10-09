@@ -1,4 +1,4 @@
-# BioStatPhys.jl -- module definition
+# binvectest.jl
 #
 # Copyright (C) 2022 Tomas S. Grigera <tgrigera@iflysib.unlp.edu.ar>
 #
@@ -14,14 +14,12 @@
 # For details see the file LICENSE in the root directory, or check
 # <https://www.gnu.org/licenses/>.
 
-module BioStatPhys
+BinnedVector_expected=Int[11,5,2,2,2,2,2,2,2,2,2,2]
 
-import Base.push!,Base.show
-export MeanVar,mean,var,WMeanVar
-
-export BinnedVector,binc
-
-include("./stat/meanvar.jl")
-include("./tool/BinnedVector.jl")
-
+function BinnedVector_test()
+    A = BinnedVector{Int}(10,min=0.,max=10.)
+    for x=0:0.5:10. A[x]+=1  end
+    A[-100.]+=5
+    A[100.]+=10
+    return A.data==BinnedVector_expected
 end
