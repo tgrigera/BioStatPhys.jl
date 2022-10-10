@@ -2,7 +2,7 @@
 
 ## Real-indexed vector
 
-This is a simple implementation of a vector that can be accessed with real (floating point) sub-indices.  It does simply a linear binning of a specified interval on the real line, and provides a convenient `Vector`-like syntax to access elements.  The stored values can be of any type, but the range and number of bins are fixed at construction.
+This is a simple implementation of a vector that can be accessed with real (floating point) sub-indices.  It does simply a linear binning of a specified (semi-open) interval ``[min,max)`` on the real line, and provides a convenient `Vector`-like syntax to access elements.  The stored values can be of any type, but the interval and number of bins are fixed at construction.
 
 ```@repl 1
     push!(LOAD_PATH,homedir()*"/software/BioStatPhys.jl"); # hide
@@ -22,7 +22,6 @@ B
 ```
 
 Indexing with integers refers to bin numbers.
-
 ```@repl 1
 	A[1:2]
 	B[1:5]
@@ -36,10 +35,13 @@ B[-1]
 ```
 
 
-## API
+### API
 
 ```@docs
 BinnedVector
-BioStatPhys.bin
+interval
+delta
+nbins
+bin
 binc
 ```

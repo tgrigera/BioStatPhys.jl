@@ -1,6 +1,6 @@
 # BinnedVector.jl
 #
-# Copyright (C) 2022 Tomas S. Grigera <tgrigera@iflysib.unlp.edu.ar>
+# Copyright (C) 2022 by Tomas S. Grigera <tgrigera@iflysib.unlp.edu.ar>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,9 +26,10 @@ e.g.  to build histograms.  The real interval and number of bins
 
 Create with
 
-    A = BinnedVector{Int}(nbins,min=1.,max=10.)
+    A = BinnedVector{Int}(nbins,min=1.,max=10.,init=zeros)
 
-and access or write as a vector:
+(`init` is optional, defaults to leave elements undefined), and access
+or write as a vector:
 
     A[5.2] += 2
 
@@ -45,14 +46,34 @@ struct BinnedVector{T} <: AbstractArray{T,1}
     data::Vector{T}
 end
 
-BinnedVector{T}(nbins::Integer;min::Float64,max::Float64,init=nothing) where {T} =
+BinnedVector{T}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,init=nothing) where {T} =
     BinnedVector{T}(min,max,nbins,(max-min)/nbins,
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 
 Base.size(A::BinnedVector{T}) where {T} = tuple(A.nbins)
 Base.size(A::BinnedVector{T},dim) where {T} = dim==1 ? A.nbins : 1
 
-range(A::BinnedVector{T}) where {T} = tuple(A.min,A.max)
+"""
+    interval(A::BinnedVector{T})
+
+Return tuple `(min,max)` giving the extrema of the real interval
+mapped to the array bins.
+"""
+interval(A::BinnedVector{T}) where {T} = tuple(A.min,A.max)
+
+"""
+    nbins(A::BinnedVector{T})
+
+Return number of bins of `A`
+"""
+nbins(A::BinnedVector{T}) where {T} = A.nbins
+
+"""
+    delta(A::BinnedVector{T})
+
+Return the with of the bins of `A`
+"""
+delta(A::BinnedVector{T}) where {T} = A.delta
 
 """
     bin(A::BinnedVector{T},x::Float64) where {T}
