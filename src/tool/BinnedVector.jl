@@ -37,7 +37,7 @@ Numbers above and below range map to two special bins.
 If indexed with integers, these are interpreted as bin numbers.
 `A[0]` and `A[-1]` are the outlier bins (below and above, respectively).
 """
-struct BinnedVector{T}
+struct BinnedVector{T} <: AbstractArray{T,1}
     min::Float64
     max::Float64
     nbins::Int
@@ -45,8 +45,9 @@ struct BinnedVector{T}
     data::Vector{T}
 end
 
-BinnedVector{T}(nbins::Integer;min::Float64,max::Float64) where T =
-    BinnedVector{T}(min,max,nbins,(max-min)/nbins,zeros(T,nbins+2))
+BinnedVector{T}(nbins::Integer;min::Float64,max::Float64,init=nothing) where {T} =
+    BinnedVector{T}(min,max,nbins,(max-min)/nbins,
+                    isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 
 Base.size(A::BinnedVector{T}) where {T} = tuple(A.nbins)
 Base.size(A::BinnedVector{T},dim) where {T} = dim==1 ? A.nbins : 1

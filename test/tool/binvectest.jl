@@ -17,7 +17,7 @@
 BinnedVector_expected=Int[11,5,2,2,2,2,2,2,2,2,2,2]
 
 function BinnedVector_test()
-    A = BinnedVector{Int}(10,min=0.,max=10.)
+    A = BinnedVector{Int}(10,min=0.,max=10.,init=zeros)
     for x=0:0.5:10. A[x]+=1  end
     A[-100.]+=5
     A[100.]+=10
