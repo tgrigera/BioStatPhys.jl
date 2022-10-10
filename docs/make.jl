@@ -7,11 +7,11 @@ makedocs(sitename="BioStatPhys.jl",
          format = Documenter.HTML( prettyurls = get(ENV, "CI", nothing) == "true" ) ,
          pages=[
              "Home" => "index.md",
-             "General statistical tools" => "stat.md"
+             "Statistical tools" => "stat.md",
+             "Miscellaneous tools" => "tools.md"
              ]
          )
 
 if get(ENV, "CI", nothing) == "true" 
     deploydocs( repo = "github.com/tgrigera/BioStatPhys.jl.git")
 end
-

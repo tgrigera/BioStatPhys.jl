@@ -1,4 +1,4 @@
-# General statistical tools
+# Statistical tools
 
 ## Running mean and variance
 
@@ -8,7 +8,9 @@ There are plenty of implementations of mean and variance of numbers stored in a 
 CurrentModule = BioStatPhys
 ```
 
-### Unweighted data
+### API
+
+#### Unweighted data
 ```@docs
 MeanVar
 push!(MV::MeanVar,x)
@@ -16,7 +18,7 @@ mean(MV::MeanVar)
 var(MV::MeanVar)
 ```
 
-### Weighted data
+#### Weighted data
 ```@docs
 WMeanVar
 ```
