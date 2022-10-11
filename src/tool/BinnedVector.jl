@@ -95,7 +95,7 @@ end
 Return center of bin `i`, which must be in range `1:size(A,1)`. Does
 not perform range check.
 """
-binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin+0.5)*A.delta
+binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin-0.5)*A.delta
 
 Base.getindex(A::BinnedVector{T},x::Float64) where {T} =
     A.data[bin(A,x)+2]
