@@ -28,3 +28,17 @@ push!(MV::WMeanVar,x,w)
 mean(MV::WMeanVar)
 var(MV::WMeanVar)
 ```
+
+## Histograms
+
+A type for computation of histograms, with track of outliers.  Provides access to bin counts or probabilities.
+
+```@docs
+Histogram
+push!(::Histogram,::AbstractFloat)
+outliers
+area
+counts
+prob
+median
+```

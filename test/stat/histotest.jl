@@ -30,4 +30,6 @@ function test_histogram()
     pr=prob(his,11)  # centered at 0
     δ=delta(his.counts)
     @test isapprox(δ*pr, 2*gauss_prob(δ/2), atol=1e-3 )
+    _,pr=prob(his)
+    @test δ*sum(pr) ≈ area(his)
 end

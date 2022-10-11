@@ -34,6 +34,8 @@ B[0]
 B[-1]
 ```
 
+The [`Histogram`](@ref) type is implemented using `BinnedVector`.
+
 
 ### API
 
