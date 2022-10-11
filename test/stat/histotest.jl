@@ -1,4 +1,4 @@
-# runtests.jl -- run all tests for BioStatPhys.jl
+# histotest.jl -- tests for Histogram
 #
 # Copyright (C) 2022 Tomas S. Grigera <tgrigera@iflysib.unlp.edu.ar>
 #
@@ -15,32 +15,19 @@
 # For details, see the file LICENSE in the root directory, or
 # check <https://www.gnu.org/licenses/>.
 
-using BioStatPhys
-using DelimitedFiles
-import Random,Distributions
-using Test
+import SpecialFunctions
 
-include("./tool/binvectest.jl")
+gauss_prob(x)=0.5*SpecialFunctions.erf(x/sqrt(2))  # Gaussian probability from 0 to x
 
-@testset "BioStatPhys tools" begin
-    @test BinnedVector_test()
-end
-
-include("./stat/stest.jl")
-include("./stat/histotest.jl")
-
-@testset "BioStatPhys statistics" begin
-
-    for (file,res) in test_MeanVar_dict
-        m,v = test_MeanVar(file)
-        @test m≈res.mean && sqrt(v)≈res.sd
+function test_histogram()
+    his=Histogram(21,min=-1.,max=1.)
+    rng=Random.MersenneTwister(12560)
+    gauss=Distributions.Normal(0.,1.)
+    for _=1:1000000
+        push!(his,rand(rng,gauss))
     end
-
-    for (file,res) in test_WMeanVar_dict
-        m,v = test_WMeanVar(file,equalweights=res.ew)
-        @test m≈res.mean && sqrt(v)≈res.sd
-    end
-
-    test_histogram()
+    @test isapprox(area(his),2*gauss_prob(1.),rtol=1e-3)
+    pr=prob(his,11)  # centered at 0
+    δ=delta(his.counts)
+    @test isapprox(δ*pr, 2*gauss_prob(δ/2), atol=1e-3 )
 end
-

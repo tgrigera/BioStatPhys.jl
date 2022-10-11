@@ -25,7 +25,7 @@ include("./stat/meanvar.jl")
 export BinnedVector,bin,binc,interval,delta,nbins
 include("./tool/BinnedVector.jl")
 
-# export Histogram,outliers,area,binc,prob,median,counts
-# include("./stat/Histogram.jl")
+export Histogram,outliers,area,binc,prob,median,counts
+include("./stat/Histogram.jl")
 
 end
