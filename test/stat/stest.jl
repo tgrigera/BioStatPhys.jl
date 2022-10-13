@@ -1,4 +1,4 @@
-# stest.jl -- tests for MeanVar
+# stest.jl -- tests for MeanVar and time correlations
 #
 # Copyright (C) 2022 Tomas S. Grigera <tgrigera@iflysib.unlp.edu.ar>
 #
@@ -48,3 +48,14 @@ test_WMeanVar_dict=Dict{String,NamedTuple}(
     "./stat/NumAcc4.dat"=>(mean=10000000.2, sd=0.1, ew=true),
     "./stat/wtest1.dat"=>(mean=80.30555555555556, sd=15.422269466672065, ew=false)
 )
+
+function test_tcorr(X)
+    C1=BioStatPhys.time_correlation_tti_direct(X,connected=true)
+    C2=BioStatPhys.time_correlation_tti_fft(X,connected=true)
+    @test C1 ≈ C2
+
+    Xc=X .+ im.*rand(size(X))
+    C1=BioStatPhys.time_correlation_tti_direct(Xc,connected=true)
+    C2=BioStatPhys.time_correlation_tti_fft(Xc,connected=true)
+    @test C1 ≈ C2
+end

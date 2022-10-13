@@ -22,12 +22,12 @@ using Test
 
 include("./tool/binvectest.jl")
 
-@testset "BioStatPhys tools" begin
+@testset "BioStatPhys tools     " begin
     @test BinnedVector_test()
 end
 
-include("./stat/stest.jl")
 include("./stat/histotest.jl")
+include("./stat/stest.jl")
 
 @testset "BioStatPhys statistics" begin
 
@@ -42,5 +42,9 @@ include("./stat/histotest.jl")
     end
 
     test_histogram()
+
+    D=readdlm("./stat/test_seq.dat")
+    X=D[:,2]
+    test_tcorr(X)
 end
 
