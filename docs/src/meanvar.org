@@ -15,7 +15,7 @@ for the variance $S^2_N$.
 
 The weighted versions (using $w_N$ for the weight of $x_N$) are:
 $$ \overline{X_N} = \overline{X_{N-1}} + \frac{w_N}{\sum_{i=1}^N w_i} \left(x_N -\overline{X}_{N-1} \right), $$
-$$ T_N = T_{N-1} + \frac{w_N \sum_{i-1}^{N-1} w_i}{\sum_{i=1}^N w_i} \left(x_N -\overline{X}_{N-1}\right)^2. $$
+$$ T_N = T_{N-1} + \frac{w_N \sum_{i-1}^{N-1} w_i}{\sum_{i=1}^N w_i} \left(x_N -\overline{X}_{N-1}\right)^2 ,\qquad S^2_N = \frac{T_N}{\frac{N-1}{N}\sum_{i=1}^N w_i},. $$
 
 * Footnotes
 
