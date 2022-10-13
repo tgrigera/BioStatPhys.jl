@@ -16,7 +16,7 @@
 
 module BioStatPhys
 
-#import Statistics
+import Statistics
 
 import Base.push!,Base.show
 export MeanVar,mean,var,WMeanVar
@@ -27,5 +27,7 @@ include("./tool/BinnedVector.jl")
 
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
+
+include("./stat/timecorr.jl")
 
 end
