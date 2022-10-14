@@ -50,12 +50,19 @@ test_WMeanVar_dict=Dict{String,NamedTuple}(
 )
 
 function test_tcorr(X)
-    C1=BioStatPhys.time_correlation_tti_direct(X,connected=true)
-    C2=BioStatPhys.time_correlation_tti_fft(X,connected=true)
+    N=size(X,1)
+    ave = Statistics.mean(X)
+    C1=BioStatPhys.time_correlation_tti_direct(X,connected=true,normalized=false,nt=N÷2,Xmean=ave)
+    C2=BioStatPhys.time_correlation_tti_fft(X,connected=true,normalized=false,nt=N÷2,Xmean=ave)
     @test C1 ≈ C2
+    C3=time_correlation(X,connected=true)
+    @test C2 == C3
 
     Xc=X .+ im.*rand(size(X))
-    C1=BioStatPhys.time_correlation_tti_direct(Xc,connected=true)
-    C2=BioStatPhys.time_correlation_tti_fft(Xc,connected=true)
+    ave = Statistics.mean(Xc)
+    C1=BioStatPhys.time_correlation_tti_direct(Xc,connected=true,normalized=false,nt=N÷2,Xmean=ave)
+    C2=BioStatPhys.time_correlation_tti_fft(Xc,connected=true,normalized=false,nt=N÷2,Xmean=ave)
     @test C1 ≈ C2
+    C3=time_correlation(Xc,connected=true)
+    @test C2 == C3
 end

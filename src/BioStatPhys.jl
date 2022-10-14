@@ -28,6 +28,7 @@ include("./tool/BinnedVector.jl")
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
 
+export time_correlation
 include("./stat/timecorr.jl")
 
 end

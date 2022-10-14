@@ -18,6 +18,7 @@
 using BioStatPhys
 using DelimitedFiles
 import Random,Distributions
+import Statistics
 using Test
 
 include("./tool/binvectest.jl")
