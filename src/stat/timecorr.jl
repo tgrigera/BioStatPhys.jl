@@ -18,22 +18,40 @@ import AbstractFFTs
 import FFTW
 
 """
-    time_correlation(X;connected=true,normalized=false,
-                     i0=nothing,nt=nothing,Xmean=nothing)
+    time_correlation(A;connected=true,normalized=false,nt=nothing,
+                     i0=nothing,Amean=nothing)
 
-Compute the time (auto-)correlation function for signal `X` (which
-must be a real or complex `Vector`).  If the connected correlation is
-requested, the mean of `X` can be passed in `Xmean`, otherwise it will
-be computed with `Statistics.mean`.
+Compute the time (auto-)correlation function for signal `A`.  Returns
+a vector `C[1:nt]`
 
-If `i0` is given then C(i,i0)= X(i0)X(i+i0) is computed.  Otherwise,
-we compute the estimate that assumes time-traslation invariance (TTI),
-C(i)=<X(i0)X(i+i0)>, where the average is over i0 and 0<=i<nt.
+ - `A`: the time signal, assumed to be sampled at evenly-spaced
+   intervals.  If `i0==nothing`, it must be a `Vector` (real or
+   complex), which is a single realisation or measurment of the random
+   signal, otherwise it must be a matrix, where columns represent times
+   and rows are different realizations of the random signal.
 
-In the TTI case, `nt` is the maximum number of times computed, taken
-as `size(X,1)÷2` if not given.
+ - If `i0==nothing` (default), then `A` is assumed stationary (or
+   time-translation invariant, TTI), and an estimate employing a
+   single sequence is computed.  Otherwise, it must be an integer in
+   the range `1<=i0<=size(A,2)` and is interpreted as an index for the
+   desired reference time.
 
-For the TTI case this function calls the FFT implementation.
+ - `connected`: if true, compute the connected (i.e. subtracting the
+   time average) correlation.
+
+ - `normalized`: if true, return the result normalized by `C[1]`.  Not
+   recommended if non-TTI.
+
+ - `nt`: the maxium time difference to compute in the TTI case,
+   otherwise ignored.  Default `size(A,1)÷2`.
+
+ - `Amean`: if `connected` is requested, then the signal mean can be
+   given if now, otherwise it will be computed.
+
+In the TTI case, an FFT-based implementation is used.
+
+In the non-TTI, connected, case, it is probably better to use the
+covariance function of the `Statistics` package, as `cov(A,dims=1)`.
 """
 function time_correlation(X;connected=true,normalized=false, i0=nothing,nt=-1,Xmean=nothing)
     if connected ave = isnothing(Xmean) ? Statistics.mean(X) : Xmean
@@ -49,6 +67,7 @@ function time_correlation(X;connected=true,normalized=false, i0=nothing,nt=-1,Xm
     end
 end
 
+"Compute the time correlation of real data for the TTI case with the FFT algorithm."
 function time_correlation_tti_fft(X::Vector{<:Real};connected,normalized,Xmean,nt)
     N=size(X,1)
 
@@ -56,19 +75,22 @@ function time_correlation_tti_fft(X::Vector{<:Real};connected,normalized,Xmean,n
     pdata= vcat(X,zero(X))
     if connected pdata[1:N].-=Xmean end
 
+    # Compute IFFT(FFT(data)*conj(FFT(data)))
     fdata=AbstractFFTs.rfft(pdata)
     fdata.*=conj.(fdata)
     pdata=AbstractFFTs.irfft(fdata,size(pdata,1))
+    # Normalize
+    pdata[1]/=N
     if normalized
-        pdata[1]/=N
         for i=1:nt-1 pdata[i+1]/=pdata[1]*(N-i) end
         pdata[1]=1
     else
-        for i=0:nt-1 pdata[i+1]/=N-i end
+        for i=1:nt-1 pdata[i+1]/=N-i end
     end
     return pdata[1:nt]
 end
 
+"Compute the time correlation of complex data for the TTI case with the FFT algorithm."
 function time_correlation_tti_fft(X::Vector{<:Complex};connected,normalized,Xmean,nt)
     N=size(X,1)
 
@@ -79,12 +101,12 @@ function time_correlation_tti_fft(X::Vector{<:Complex};connected,normalized,Xmea
     fdata=AbstractFFTs.fft(pdata)
     fdata.*=conj.(fdata)
     pdata=AbstractFFTs.ifft(fdata)
+    pdata[1]/=N
     if normalized
-        pdata[1]/=N
         for i=1:nt-1 pdata[i+1]/=pdata[1]*(N-i) end
         pdata[1]=1
     else
-        for i=0:nt-1 pdata[i+1]/=N-i end
+        for i=1:nt-1 pdata[i+1]/=N-i end
     end
     return pdata[1:nt]
 end
@@ -118,18 +140,31 @@ function time_correlation_tti_direct(X;connected,normalized,Xmean,nt)
 end
 
 """
-    time_correlation_tw_direct(X;i0=1,connected=true,normalized=false,Xmean=nothing)
+    time_correlation_tw_direct(X::Matrix{<:Number};i0,connected,
+    normalized,Xmean)
 
 Compute time correlation for fixed time origin (tw), specified by `i0`.
+
+`X` must be a numerical matrix, with each row representing one sample
+of the signal (i.e. columns are times, rows are different experiments).
+
+`Xmean` is the mean of X at each time, e.g. `Xmean=Statistics.mean(X,dims=1)`.
+If `nothing`, it will be computed.
 """
 function time_correlation_tw_direct(X;i0,connected,normalized,Xmean)
-    if !connected Xmean=0. end
-    n=size(X,1)
-    nt=n-i0
-    C=zeros(Float64,nt)
+    n=size(X,2)
+    nt=n-i0+1
+    C=zeros(eltype(X),nt)
 
-    for i=0:nt-1
-        C[i+1] += conj((X[i0]-Xmean)) * (X[i0+i]-Xmean)
+    if connected
+        if isnothing(Xmean) Xmean=Statistics.mean(X,dims=1) end
+        for i=0:nt-1
+            C[i+1] = Statistics.mean(conj.(X[:,i0].-Xmean[i0]) .* (X[:,i0+i].-Xmean[i0+i]))
+        end
+    else
+        for i=0:nt-1
+            C[i+1] = Statistics.mean(conj.(X[:,i0]) .* (X[:,i0+i]))
+        end
     end
     
     if normalized C./=C[1] end
