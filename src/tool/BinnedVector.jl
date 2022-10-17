@@ -28,8 +28,14 @@ Create with
 
     A = BinnedVector{Int}(nbins,min=1.,max=10.,init=zeros)
 
-(`init` is optional, defaults to leave elements undefined), and access
-or write as a vector:
+or
+
+    A = BinnedVector{Int}(;Δ=0.1,min=1.,max=10.init=zeros,round_Δ=RoundUp)
+
+`init` is optional, defaults to leave elements undefined, `round_Δ`
+indicates wether to round the bin width down (default) or up to fit an
+integer number of bins in the given interval.  Access or write as a
+vector:
 
     A[5.2] += 2
 
@@ -42,13 +48,19 @@ struct BinnedVector{T} <: AbstractArray{T,1}
     min::Float64
     max::Float64
     nbins::Int
-    delta::Float64
+    Δ::Float64
     data::Vector{T}
 end
 
 BinnedVector{T}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,init=nothing) where {T} =
     BinnedVector{T}(min,max,nbins,(max-min)/nbins,
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
+
+function BinnedVector{T}(;Δ::AbstractFloat,min::AbstractFloat,max::AbstractFloat,
+                         init=nothing,round_Δ::RoundingMode=RoundDown) where {T}
+    nbins = round_Δ==RoundDown ? Int(ceil((max-min)/Δ)) : Int(floor((max-min)/Δ))
+    return BinnedVector{T}(nbins,min=min,max=max,init=init)
+end    
 
 Base.size(A::BinnedVector{T}) where {T} = tuple(A.nbins)
 Base.size(A::BinnedVector{T},dim) where {T} = dim==1 ? A.nbins : 1
@@ -73,7 +85,7 @@ nbins(A::BinnedVector{T}) where {T} = A.nbins
 
 Return the with of the bins of `A`
 """
-delta(A::BinnedVector{T}) where {T} = A.delta
+delta(A::BinnedVector{T}) where {T} = A.Δ
 
 """
     bin(A::BinnedVector{T},x::Float64) where {T}
@@ -82,7 +94,7 @@ Map real value `x` to bin number.  Return 0 if below range,
 or -1 if above range.
 """
 function bin(A::BinnedVector{T},x::Float64)::Int where {T}
-    b::Int = floor(Int,(x-A.min)/A.delta)+1
+    b::Int = floor(Int,(x-A.min)/A.Δ)+1
     if b<1 return 0
     elseif b>A.nbins return -1
     else return b
@@ -95,7 +107,7 @@ end
 Return center of bin `i`, which must be in range `1:size(A,1)`. Does
 not perform range check.
 """
-binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin-0.5)*A.delta
+binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin-0.5)*A.Δ
 
 Base.getindex(A::BinnedVector{T},x::Float64) where {T} =
     A.data[bin(A,x)+2]
