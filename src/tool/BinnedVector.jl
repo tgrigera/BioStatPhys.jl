@@ -28,14 +28,18 @@ Create with
 
     A = BinnedVector{Int}(nbins,min=1.,max=10.,init=zeros)
 
-or
+for fixed number of bins, or
 
     A = BinnedVector{Int}(;Δ=0.1,min=1.,max=10.init=zeros,round_Δ=RoundUp)
+    A = BinnedVector{Int}(;Δ=0.1,min=1.,max=10.init=zeros,round_min=RoundUp)
+    A = BinnedVector{Int}(;Δ=0.1,min=1.,max=10.init=zeros,round_max=RoundUp)
 
-`init` is optional, defaults to leave elements undefined, `round_Δ`
-indicates wether to round the bin width down (default) or up to fit an
-integer number of bins in the given interval.  Access or write as a
-vector:
+to get fixed `(min, max)`, `(Δ,max)` or `(min,Δ)` respectively
+(rounding mode `RoundDown` is also recognised).
+
+`init` is optional, defaults to leave elements undefined.
+
+Access or write as a vector:
 
     A[5.2] += 2
 
@@ -57,9 +61,24 @@ BinnedVector{T}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,init=nothin
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 
 function BinnedVector{T}(;Δ::AbstractFloat,min::AbstractFloat,max::AbstractFloat,
-                         init=nothing,round_Δ::RoundingMode=RoundDown) where {T}
-    nbins = round_Δ==RoundDown ? Int(ceil((max-min)/Δ)) : Int(floor((max-min)/Δ))
-    return BinnedVector{T}(nbins,min=min,max=max,init=init)
+                         round_Δ::Union{RoundingMode,Nothing}=nothing,
+                         round_max::Union{RoundingMode,Nothing}=nothing,
+                         round_min::Union{RoundingMode,Nothing}=nothing,
+                         init=nothing) where {T}
+
+    if !isnothing(round_Δ)
+        nbins = round_Δ==RoundDown ? Int(ceil((max-min)/Δ)) : Int(floor((max-min)/Δ))
+    elseif !isnothing(round_max)
+        nbins = round_max==RoundUp ? Int(ceil((max-min)/Δ)) : Int(floor((max-min)/Δ))
+        max = min + Δ*nbins
+    elseif !isnothing(round_min)
+        nbins = round_min==RoundDown ? Int(ceil((max-min)/Δ)) : Int(floor((max-min)/Δ))
+        min = max - Δ*nbins
+    else
+        throw("BinnedVector: one of round_Δ, round_min, round_max must be different from nothing")
+    end
+    return BinnedVector{T}(min,max,nbins,(max-min)/nbins,
+                    isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 end    
 
 Base.size(A::BinnedVector{T}) where {T} = tuple(A.nbins)

@@ -21,11 +21,13 @@ B[5.3]=4//1
 B
 ```
 
-Alternatively, construct specifying an (approximate) bin width, which will be rounded up or down:
+Alternatively, it is possible to construct specifying bin width and the interval.  In this case, one of the values will need to be rounded to get an integer number of bins:
 ```@repl 1
-	C = BinnedVector{Int}(Δ=0.15,min=5.,max=10.); C.Δ
-	D = BinnedVector{Int}(Δ=0.15,min=5.,max=10.,round_Δ=RoundUp); D.Δ
+	C = BinnedVector{Int}(Δ=0.15,min=5.,max=10.,round_Δ=RoundUp); (C.Δ, interval(C))
+	D = BinnedVector{Int}(Δ=0.15,min=5.,max=10.,round_max=RoundUp); (D.Δ, interval(D))
+	E = BinnedVector{Int}(Δ=0.15,min=5.,max=10.,round_min=RoundUp); (E.Δ, interval(E))
 ```
+`RoundDown` is also recognised.
 
 Indexing with integers refers to bin numbers.
 ```@repl 1
