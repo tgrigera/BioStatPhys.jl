@@ -16,7 +16,7 @@
 
 module BioStatPhys
 
-import Statistics
+import Statistics,LinearAlgebra
 
 import Base.push!,Base.show
 export MeanVar,mean,var,WMeanVar
@@ -24,6 +24,8 @@ include("./stat/meanvar.jl")
 
 export BinnedVector,bin,binc,interval,delta,nbins
 include("./tool/BinnedVector.jl")
+
+include("./tool/binnings.jl")
 
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
