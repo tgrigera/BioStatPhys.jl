@@ -128,6 +128,14 @@ not perform range check.
 """
 binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin-0.5)*A.Δ
 
+"""
+    Base.range(A::BinnedVector{T}) where{T}
+
+Return range spanning bin centers of `A`.  With `r=collect(range(A))`
+one obtains a `Vector` such that `r[i]=binc(A,i)`
+"""
+Base.range(A::BinnedVector{T}) where{T} = range(start=A.min+0.5*A.Δ,step=A.Δ,length=A.nbins)
+
 Base.getindex(A::BinnedVector{T},x::Float64) where {T} =
     A.data[bin(A,x)+2]
 

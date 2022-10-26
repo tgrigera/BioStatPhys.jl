@@ -17,8 +17,9 @@
 """
     distance_binning(pos,Δr;rmin=0.,rmax=nothing)
 
-Create a BinnedVector of tuples `(i,j)` where each bin contains all
-pairs of positions in `pos` whose distance is within the bin extrema.
+Create a BinnedVector of tuples `(i,j)` with `i!=j`, where each bin
+contains all pairs of positions in `pos` whose distance is within the
+bin extrema.
 
 `pos` is expected to be a `Matrix` where each row `pos[i,:]` is a 2-d
 or 3-d position vector.
@@ -43,3 +44,6 @@ function distance_binning(pos,Δr;rmin=0.,rmax=nothing)
     end
     return binning
 end
+
+"Alias for a `BinnedVector` of `Vector{Tuple{Int,Int}}`"
+DistanceBinning=BinnedVector{Vector{Tuple{Int,Int}}}

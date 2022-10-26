@@ -8,6 +8,7 @@ makedocs(sitename="BioStatPhys.jl",
          pages=[
              "Home" => "index.md",
              "Statistical tools" => "stat.md",
+             "Correlation functions" => "corr.md",
              "Miscellaneous tools" => "tools.md"
              ]
          )

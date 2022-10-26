@@ -18,8 +18,7 @@ import AbstractFFTs
 import FFTW
 
 """
-    time_correlation(A;connected=true,normalized=false,nt=nothing,
-                     i0=nothing,Amean=nothing)
+    time_correlation(A; connected=true, normalized=false, nt=nothing, i0=nothing, Amean=nothing)
 
 Compute the time (auto-)correlation function for signal `A`.  Returns
 a vector `C[1:nt]`
@@ -46,15 +45,15 @@ a vector `C[1:nt]`
    otherwise ignored.  Default `size(A,1)÷2`.
 
  - `Amean`: if `connected` is requested, then the signal mean can be
-   given if now, otherwise it will be computed.
+   given if known, otherwise it will be computed.
 
 In the TTI case, an FFT-based implementation is used.
 
 In the non-TTI, connected, case, it is probably better to use the
 covariance function of the `Statistics` package, as `cov(A,dims=1)`.
 """
-function time_correlation(X;connected=true,normalized=false, i0=nothing,nt=-1,Xmean=nothing)
-    if connected ave = isnothing(Xmean) ? Statistics.mean(X) : Xmean
+function time_correlation(X;connected=true,normalized=false, i0=nothing,nt=-1,Amean=nothing)
+    if connected ave = isnothing(Amean) ? Statistics.mean(X) : Amean
     else ave = 0.
     end
     N=size(X,1)

@@ -54,4 +54,15 @@ delta
 nbins
 bin
 binc
+Base.range(::BinnedVector)
+```
+
+
+## Distance binning
+
+The `distance_binning` function takes a series of points in (2- or 3-``d``) space and creates a `BinnedVector` that classifies the pairs according to their Euclidean distance.
+
+```@docs
+DistanceBinning
+distance_binning
 ```
