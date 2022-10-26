@@ -77,3 +77,22 @@ function space_correlation(binning::DistanceBinning,X;
 end
 
 #    Ccr_space(positions,signal,Δr;rmax=2000,normalize=false)
+
+
+"""
+    correlation_length_r0(r,C)
+
+Compute the correlation length proxy ``r_0`` from ``C_c(r)`` given as
+vectors `r` and `C` (as obtained e.g. from `space_correlation`(@ref).
+
+Note that ``r_0`` is **not** a correlation length, just a proxy that
+scales with system size ``L`` as ``\\log L`` or ``L`` if the actual
+correlation length is much shorter or much larger than ``L``
+respectively.
+"""
+function correlation_length_r0(r,C)
+    ir=findfirst(x->x<0,C)
+    if !isnan(C[ir-1]) return r[ir-1] - C[ir-1]*(r[ir]-r[ir-1])/(C[ir]-C[ir-1])
+    else return r[ir]
+    end
+end

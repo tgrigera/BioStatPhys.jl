@@ -1,14 +1,6 @@
 # Correlation functions
 
-The functions in this section compute estimates of several space and time correlation functions.  The precised definitions of the different quantities computed are summarised below.  For more details, caveats and discussion of the correlation functions we refer to the review article by T. S. Grigera[^review].
-
-
-
-[^review]:
-
-    The correlation functions estimators computed by the routines in this section are discussed in:
-
-    - T. S. Grigera, Correlation functions as a tool to study collective behaviour phenomena in biological systems. _J. Phys. Complex._ __2,__ 045016 (2021).  [[DOI](https://doi.org/10.1088/2632-072X/ac2b06)]
+The functions in this section compute estimates of several space and time correlation functions.  The precised definitions of the different quantities computed are summarised below.  For more details, caveats and discussion of the correlation functions we refer to the review article by T. S. Grigera[^1].
 
 
 ## Time correlations and correlation time
@@ -52,7 +44,7 @@ Note that the estimate obtained this way is noisier the larger the value of ``k`
 
 If the process is not stationary, then the first estimator, which needs several samples, must be used.  Although we implement this here, note that in the connected case the covariance function `cov` from the `Statistics` package can be used instead and is more convenient.  The present routine is more useful for stationary case.
 
-Refer to the review article[^review] for more details.
+Refer to the review article[^1] for more details.
 
 ### Correlation time
 
@@ -67,7 +59,7 @@ time_correlation
 
 ## Space correlations and correlation length
 
-The space correlation of a space-dependent quantity ``a(\mathbf{r])`` are defined as
+The space correlation functions of a space-dependent quantity ``a(\mathbf{r})`` are defined as
 ```math
 \begin{align*}
    C(\mathbf{r}) & = \left\langle a(\mathbf{r_0}) a(\mathbf{r_0}+\mathbf{r}) \right\rangle,\\
@@ -76,17 +68,62 @@ The space correlation of a space-dependent quantity ``a(\mathbf{r])`` are define
 ```
 where ``\delta a(\mathbf{r}) = a(\mathbf{r}) - \langle a\rangle`` and we are assuming the system is homogeneous (i.e. translation-invariant).  ``C_c(\mathbf{r})`` is called _connected_ correlation in the physics literature, or _auto covariance_ in the mathematical statistics literature.
 
-The `space_correlation`(@ref) function computes the estimate of ``C(r)`` for an isotropic discrete system,
+The [`space_correlation`](@ref) function computes the estimate of ``C(r)`` for an isotropic discrete system,
 ```math
 \begin{align*}
   \hat C_c(r) & = \frac{\sum_{ij} \delta a_i \delta a_j
     \delta(r-r_{ij}) } {\sum_{kl} \delta(r-r_{kl})}.
 \end{align*}
 ```
-The average ``\langle a\rangle`` can be estimated with space average or phase average (see below and the review[^review] for details).
+The average ``\langle a\rangle`` can be estimated with space average or phase average (see below and the review[^1] for details).
+
+### Correlation length
+
+The _correlation length_ is a length scale that measures how far apart two points in space must be taken for them to be significantly decorrelated.  A good, though abstract, definition is
+```math
+  \xi = \lim_{r\to\infty} \frac{r}{-\log C_c(r)},
+```
+which picks the slowest (i.e. longest-ranged) exponential decay rate.
+
+Since this definition is not directly applicable to finite data, several alternatives have been proposed, more suited to experimental or numerical determination but respecting the functional dependence with control parameters[^1].  We mention here only those that are currently implemented in `BioStatPhys`.
+
+#### ``r_0``
+
+If the connected correlation has been computed with space averaging, ``C_c(r)`` will have at least one zero, and the location ``r_0`` of the first of these can be used as a proxy of ``\xi``.  We stress that ``r_0`` is __not__ a correlation length, but a useful scale in the case the correlation can be measured for different system sizes ``L`` (or in observation windows of different size[^2]).  ``r_0`` scales with size as[^3]
+```math
+  \begin{align*}
+    r_0 &\sim \xi \log(L/\xi), & L\gg\xi, \\
+    r_0 & \sim L, & L\ll \xi.
+  \end{align*}
+```
+The second situation will always be the case in scale-free systems where ``\xi=\infty``.  See [`correlation_length_r0`](@ref).
+
 
 ### API
 
 ```@docs
 space_correlation
+correlation_length_r0
 ```
+
+## References
+
+[^1]:T. S. Grigera, Correlation functions as a tool to study
+     collective behaviour phenomena in biological
+     systems. _J. Phys. Complex._ __2,__ 045016 (2021).
+     [[DOI](https://doi.org/10.1088/2632-072X/ac2b06)].  This review
+     discusses the correlation functions and estimators computed by
+     the routines documented here and is the general reference for
+     this section.
+
+[^2]:D. A. Martin, T. L. Ribeiro, S. A. Cannas, T. S. Grigera,
+     D. Plenz, and D. R. Chialvo. Box scaling as a proxy of finite
+     size correlations. _Sci Rep_ __11,__ 15937. (2021)
+     [[DOI](http://dx.doi.org/10.1038/s41598-021-95595-2)]
+
+[^3]:A. Cavagna, I. Giardina, and T. S.  Grigera. The physics of
+     flocking: Correlation as a compass from experiments to
+     theory. _Physics Reports_ __728,__ 1–62
+     (2018). [[DOI](http://dx.doi.org/10.1016/j.physrep.2017.11.003)]
+
+

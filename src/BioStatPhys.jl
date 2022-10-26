@@ -35,7 +35,7 @@ include("./stat/Histogram.jl")
 export time_correlation
 include("./stat/timecorr.jl")
 
-export space_correlation
+export space_correlation, correlation_length_r0
 include("./stat/spacecorr.jl")
 
 end
