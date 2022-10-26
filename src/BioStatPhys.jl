@@ -32,7 +32,7 @@ include("./tool/binnings.jl")
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
 
-export time_correlation
+export time_correlation, correlation_time_spectral
 include("./stat/timecorr.jl")
 
 export space_correlation, correlation_length_r0

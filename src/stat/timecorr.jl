@@ -170,3 +170,38 @@ function time_correlation_tw_direct(X;i0,connected,normalized,Xmean)
 
     return C
 end
+
+import Roots
+
+"""
+    correlation_time_spectral(C,Δt)
+
+Compute the spectral correlation time ``\\tau`` from the connected time
+correlation `C` (e.g. as computed by [`time_correlation`](@ref)).  The
+scalar `Δt` is the time step for the sampling of `C`.
+
+The exact definition ``\\tau`` is
+
+```math
+ \\int_0^\\infty \\!\\!dt \\, \\frac{C_c(t)}{C_c(0)} \\frac{\\sin t/\\tau}{t} = \\frac{\\pi}{4}
+```
+"""
+function correlation_time_spectral(C,Δt)
+    t0=Δt/1000
+    t1=Δt*size(C,1)-1
+    in0=intHH(t0,C,Δt)
+    in1=intHH(t1,C,Δt)
+    if in0*in1>0
+        throw("Problem in correlation_time_spectral: failed to bracket: int($t0)=$in0,  int($t1)=$in1")
+    end
+    return Roots.find_zero(x->intHH(x,C,Δt),(t0,t1),Roots.A42())
+end
+
+"Compute ``\\int_0^T C(t) \\frac{ \\sin(t/tau) / t} \\, dt - \\pi/4`` "
+function intHH(tau,C,Δt)
+    I0::Float64=C[1]*Δt/tau
+    for i=2:length(C)
+        I0+= C[i]*sin(i*Δt/tau)/i
+    end
+    return I0/C[1]-π/4
+end

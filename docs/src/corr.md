@@ -48,12 +48,29 @@ Refer to the review article[^1] for more details.
 
 ### Correlation time
 
+The _correlation time_ is a time scale that measures how separated in time two measurements must be for them to be significantly decorrelated.  A good, though abstract, definition is
+```math
+  \tau = \lim_{t\to\infty} \frac{t}{-\log C_c(t)}.
+```
+which picks the slowest (i.e. longest-ranged) exponential decay rate (cf [Correlation length](@ref)).
+
+Since this definition is not directly applicable to finite data, several practical alternatives have been proposed[^1].  We mention here only those that are currently implemented in `BioStatPhys`.
+
+#### Spectral correlation time
+
+The spectral correlation time ``\tau_S`` is defined as the inverse of the frequency ``\omega_0`` such that half the spectral content of the Fourier transform of the connected correlation ``C_c(t)`` is contained in the interval ``[-\omega_0,\omega_0]``.  Translated to the time domain, the definition is
+```math
+ \int_0^\infty \!\!dt \, \frac{C_c(t)}{C_c(0)} \frac{\sin t/\tau}{t} = \frac{\pi}{4}
+```
+This is computed by [`correlation_time_spectral`](@ref).
+
 ### API
 
 The stationary (or TTI) estimate for a single real or complex sequence is implemented with an algorithm that uses fast-Fourier-transforms, giving ``O(N\log N)`` performance.
 
 ```@docs
 time_correlation
+correlation_time_spectral
 ```
 
 
@@ -83,7 +100,7 @@ The _correlation length_ is a length scale that measures how far apart two point
 ```math
   \xi = \lim_{r\to\infty} \frac{r}{-\log C_c(r)},
 ```
-which picks the slowest (i.e. longest-ranged) exponential decay rate.
+which picks the slowest (i.e. longest-ranged) exponential decay rate (cf. [Correlation time](@ref)).
 
 Since this definition is not directly applicable to finite data, several alternatives have been proposed, more suited to experimental or numerical determination but respecting the functional dependence with control parameters[^1].  We mention here only those that are currently implemented in `BioStatPhys`.
 
