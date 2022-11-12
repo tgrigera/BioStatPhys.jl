@@ -1,0 +1,22 @@
+#+title: Running estimation of mean and variance
+
+There are plenty of implementations of mean and variance of numbers stored in a vector.  However, sometimes  it is more convenient to maintain running estimates of mean and/or variance, adding new data as it pops up, without storing the whole dataset in an array.  One way of achieving this is with West's recursion formula, which we implement here.
+
+
+* West's recursion formulae
+
+These are recursion formulae that allow to hold running estimates of mean and variance without storing the data points.  Additionally, they provide a good numerical estimate of the variance (performing as well as the two-pass algorithm of the Numerical Recipes book without need for a second pass).  I found this formula buried  in a TODO in the source of the GNU Scientific Library.  It was proposed by D. H. D. West [fn:1].
+
+For unweighted data, the formulae are:
+$$ \overline{X}_N = \overline{X}_{N-1} + \frac{1}{N} \left(x_N -\overline{X}_{N-1} \right),$$
+for the mean with $\overline{X_N}$, where $x_N$ is the \(N\)-th data point, and
+$$ T_N = T_{N-1} + \frac{N-1}{N} \left(x_N -\overline{X}_{N-1}\right)^2, \qquad S^2_N = \frac{T_N}{N-1},$$
+for the variance $S^2_N$.
+
+The weighted versions (using $w_N$ for the weight of $x_N$) are:
+$$ \overline{X_N} = \overline{X_{N-1}} + \frac{w_N}{\sum_{i=1}^N w_i} \left(x_N -\overline{X}_{N-1} \right), $$
+$$ T_N = T_{N-1} + \frac{w_N \sum_{i-1}^{N-1} w_i}{\sum_{i=1}^N w_i} \left(x_N -\overline{X}_{N-1}\right)^2 ,\qquad S^2_N = \frac{T_N}{\frac{N-1}{N}\sum_{i=1}^N w_i},. $$
+
+* Footnotes
+
+[fn:1] D. H. D. West, Updating mean and variance estimates: an improved method. /Communications of the ACM./ *22,* 532 (1979).
