@@ -61,6 +61,11 @@ points.
 """
 area(his::Histogram)=(his.ndata-outliers(his))/his.ndata;
 
+"""
+    binc(his::Histogram,bin)
+
+Return position of center of bin `bin`.  No range check performed.
+"""
 binc(his::Histogram,bin)=binc(his.counts,bin)
 
 """
@@ -70,8 +75,7 @@ Return tuple `(x,counts)` where `x` is a vector with the position of
 bin centers and `counts` is a vector of bin counts.
 """
 function counts(his::Histogram)
-    x=collect(his.counts.min+his.counts.delta/2:his.counts.delta:his.counts.max)
-    return x,his.counts
+    return collect(range(his.counts)),his.counts
 end
 
 """
@@ -92,10 +96,8 @@ e.g. the sum of `prob` elements multiplied by the bin with is equal to
 `area(his)`.
 """
 function prob(his::Histogram)
-    min,max=interval(his.counts)
-    x=collect(min+delta(his.counts)/2:delta(his.counts):max)
     f = 1/(his.ndata*delta(his.counts))
-    return x,f*his.counts
+    return collect(range(his.counts)),f*his.counts
 end
 
 """

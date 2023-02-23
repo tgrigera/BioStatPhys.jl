@@ -42,7 +42,7 @@ B[0]
 B[-1]
 ```
 
-The [`Histogram`](@ref) type is implemented using `BinnedVector`.
+As an example of use, the [`Histogram`](@ref) type is implemented using `BinnedVector`.
 
 
 ### API
