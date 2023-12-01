@@ -48,7 +48,7 @@ Numbers above and below range map to two special bins.
 If indexed with integers, these are interpreted as bin numbers.
 `A[0]` and `A[-1]` are the outlier bins (below and above, respectively).
 """
-struct BinnedVector{T} <: AbstractArray{T,1}
+struct BinnedVector{T,SpecialZero} <: AbstractArray{T,1}
     min::Float64
     max::Float64
     nbins::Int
@@ -56,11 +56,12 @@ struct BinnedVector{T} <: AbstractArray{T,1}
     data::Vector{T}
 end
 
-BinnedVector{T}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,init=nothing) where {T} =
-    BinnedVector{T}(min,max,nbins,(max-min)/nbins,
+BinnedVector{T,false}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,
+                      init=nothing) where {T} =
+    BinnedVector{T,false}(min,max,nbins,(max-min)/nbins,
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 
-function BinnedVector{T}(;Δ::Real,min::Real,max::Real,
+function BinnedVector{T,false}(;Δ::Real,min::Real,max::Real,
                          round_Δ::Union{RoundingMode,Nothing}=nothing,
                          round_max::Union{RoundingMode,Nothing}=nothing,
                          round_min::Union{RoundingMode,Nothing}=nothing,
@@ -77,12 +78,30 @@ function BinnedVector{T}(;Δ::Real,min::Real,max::Real,
     else
         throw("BinnedVector: one of round_Δ, round_min, round_max must be different from nothing")
     end
-    return BinnedVector{T}(min,max,nbins,(max-min)/nbins,
+    return BinnedVector{T,false}(min,max,nbins,(max-min)/nbins,
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 end    
 
-Base.size(A::BinnedVector{T}) where {T} = tuple(A.nbins)
-Base.size(A::BinnedVector{T},dim) where {T} = dim==1 ? A.nbins : 1
+function BinnedVector{T,true}(;Δ::Real,max::Real,
+                         round_Δ::Union{RoundingMode,Nothing}=nothing,
+                         round_max::Union{RoundingMode,Nothing}=nothing,
+                         init=nothing) where {T}
+
+    if !isnothing(round_Δ)
+        nbins = round_Δ==RoundDown ? Int(ceil((max)/Δ)) : Int(floor((max)/Δ))
+    elseif !isnothing(round_max)
+        nbins = round_max==RoundUp ? Int(ceil((max)/Δ)) : Int(floor((max)/Δ))
+        max = Δ*nbins
+    else
+        throw("BinnedVector: one of round_Δ, round_max must be different from nothing")
+    end
+    nbins += 1
+    return BinnedVector{T,true}(0.,max,nbins,max/(nbins-1),
+                    isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
+end    
+
+Base.size(A::BinnedVector{T,SZ}) where {T,SZ} = tuple(A.nbins)
+Base.size(A::BinnedVector{T,SZ},dim) where {T,SZ} = dim==1 ? A.nbins : 1
 
 """
     interval(A::BinnedVector{T})
@@ -90,21 +109,21 @@ Base.size(A::BinnedVector{T},dim) where {T} = dim==1 ? A.nbins : 1
 Return tuple `(min,max)` giving the extrema of the real interval
 mapped to the array bins.
 """
-interval(A::BinnedVector{T}) where {T} = tuple(A.min,A.max)
+interval(A::BinnedVector{T,SZ}) where {T,SZ} = tuple(A.min,A.max)
 
 """
     nbins(A::BinnedVector{T})
 
 Return number of bins of `A`
 """
-nbins(A::BinnedVector{T}) where {T} = A.nbins
+nbins(A::BinnedVector{T,SZ}) where {T,SZ} = A.nbins
 
 """
     delta(A::BinnedVector{T})
 
 Return the with of the bins of `A`
 """
-delta(A::BinnedVector{T}) where {T} = A.Δ
+delta(A::BinnedVector{T,SZ}) where {T,SZ} = A.Δ
 
 """
     bin(A::BinnedVector{T},x::Float64) where {T}
@@ -112,9 +131,18 @@ delta(A::BinnedVector{T}) where {T} = A.Δ
 Map real value `x` to bin number.  Return 0 if below range,
 or -1 if above range.
 """
-function bin(A::BinnedVector{T},x::Float64)::Int where {T}
+function bin(A::BinnedVector{T,false},x::Float64)::Int where {T}
     b::Int = floor(Int,(x-A.min)/A.Δ)+1
     if b<1 return 0
+    elseif b>A.nbins return -1
+    else return b
+    end
+end
+
+function bin(A::BinnedVector{T,true},x::Float64)::Int where {T}
+    if x==0. return 1 end
+    b::Int = floor(Int,(x-A.min)/A.Δ)+2
+    if b<2 return 0
     elseif b>A.nbins return -1
     else return b
     end
@@ -126,7 +154,9 @@ end
 Return center of bin `i`, which must be in range `1:size(A,1)`. Does
 not perform range check.
 """
-binc(A::BinnedVector{T},bin::Int) where {T} = A.min + (bin-0.5)*A.Δ
+binc(A::BinnedVector{T,false},bin::Int) where {T} = A.min + (bin-0.5)*A.Δ
+
+binc(A::BinnedVector{T,true},bin::Int) where {T} = bin==1 ? 0. : (bin-1-0.5)*A.Δ
 
 """
     Base.range(A::BinnedVector{T}) where{T}
