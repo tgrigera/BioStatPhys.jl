@@ -60,7 +60,7 @@ BinnedVector{T}(nbins::Integer;min::AbstractFloat,max::AbstractFloat,init=nothin
     BinnedVector{T}(min,max,nbins,(max-min)/nbins,
                     isnothing(init) ? Vector{T}(undef,nbins+2) : init(T,nbins+2) )
 
-function BinnedVector{T}(;Δ::AbstractFloat,min::AbstractFloat,max::AbstractFloat,
+function BinnedVector{T}(;Δ::Real,min::Real,max::Real,
                          round_Δ::Union{RoundingMode,Nothing}=nothing,
                          round_max::Union{RoundingMode,Nothing}=nothing,
                          round_min::Union{RoundingMode,Nothing}=nothing,

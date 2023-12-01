@@ -56,7 +56,7 @@ function time_correlation(X;connected=true,normalized=false, i0=nothing,nt=-1,Am
     if connected ave = isnothing(Amean) ? Statistics.mean(X) : Amean
     else ave = 0.
     end
-    N=size(X,1)
+    N=size(X,isnothing(i0) ? 1 : 2)
     if nt<0 nt=N÷2 end
     if nt>N nt=N end
     if isnothing(i0) time_correlation_tti_fft(X,connected=connected,normalized=normalized,

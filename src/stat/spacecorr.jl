@@ -76,8 +76,105 @@ function space_correlation(binning::DistanceBinning,X;
     return vcat(0,collect(range(binning))),vcat(Cr0,Cr)
 end
 
-#    Ccr_space(positions,signal,Δr;rmax=2000,normalize=false)
 
+#
+# This must be extended to provide a push-interface 
+#
+
+include("../tool/region.jl")
+
+mutable struct Density_correlation{R<:Region}
+    region::R
+    npart::Int
+    nconf::Int
+    npr::BinnedVector{Int}     # number of pairs at distance r
+    Cnpr::BinnedVector{Int}    # cumulative number of pairs
+    centers::BinnedVector{Int}     # valid centers
+end
+
+# function density_correlation_rdf(region::PeriodicRectangle,pos,Δr;rmax=nothing)
+#     rdf = Density_correlation_rdf(
+#         region, 0,
+#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+#     )
+#     return density_correlation_rdf(rdf,pos)
+# end
+
+# function density_correlation_rdf(rdf::Density_correlation_rdf{R},pos)  where R <: PeriodicRegion
+#     rdf.nconf += 1
+#     for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
+#         r = sqrt(distancesq(rdf.region,pos[i,:],pos[j,:]))
+#         b = bin(rdf.npr,r)
+#         rdf.npr[b] += 2
+#         if b<0 b=nbins(rdf.Cnpr) end
+#         rdf.Cnpr[1:b] .+= 2
+#     end
+#     return rdf
+# end
+
+# function ufa
+#     gr = zeros(Float64,size(binning,1))
+#     gr .= length.(binning)
+#     gr ./= N
+#     Δ = delta(binning)
+#     for (i,r) ∈ enumerate(range(binning))
+#         vol = π * ( (r+Δ)^2 - (r-Δ)^2 )
+#         gr[i] /= vol * Nc
+#     end
+#     return gr
+# end
+
+function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
+    if isnothing(rmax)
+        rmax=LinearAlgebra.norm([region.Lx,region.Ly])
+    end
+    dcorr = Density_correlation(
+        region, size(pos,1),0,
+        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+    )
+    return density_correlation(dcorr,pos)
+end
+
+function density_correlation(dcorr::Density_correlation{Rectangle},pos)
+    @assert dcorr.npart==size(pos,1)
+    dcorr.nconf += 1
+    for i ∈ 1:size(pos,1)
+        dbd = dborder(dcorr.region,pos[i,1], pos[i,2])
+        lsb=bin(dcorr.npr,dbd)-1
+        dcorr.centers[1:lsb] .+= 1
+        for j ∈ 1:size(pos,1)
+            if i==j continue end
+            r = LinearAlgebra.norm( pos[i,:]-pos[j,:] )
+            b = bin(dcorr.npr,r)
+            if 1 <= b <= lsb
+                dcorr.Cnpr[1:b] .+= 1
+                dcorr.npr[b] += 1
+            else
+                dcorr.Cnpr .+= 1
+            end
+        end
+    end
+    return dcorr
+end
+
+function rdf(dcorr::Density_correlation{R}) where R <: Region
+    rmax = interval(dcorr.npr)[2]
+    Δ = delta(dcorr.npr)
+    gr = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
+    Cr = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
+    ρ = dcorr.npart / volume(dcorr.region)
+    for (i,r) ∈ enumerate(range(dcorr.npr))
+        vol = π * ( (r+Δ/2)^2 - (r-Δ/2)^2 )
+        gr[i] = dcorr.npr[i] / (dcorr.npart * ρ * vol * dcorr.centers[i] * dcorr.nconf)
+        Cr[i] = Cr[i-1] + vol*gr[i]
+        # Cr[i] = rdf.Cnpr[i] / (rdf.centers[i]* rdf.nconf)
+    end
+    return gr,Cr
+end
 
 """
     correlation_length_r0(r,C)
