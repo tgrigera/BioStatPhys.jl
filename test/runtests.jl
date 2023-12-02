@@ -25,6 +25,7 @@ include("./tool/binvectest.jl")
 
 @testset "BioStatPhys tools     " begin
     @test BinnedVector_test()
+    @test ZBinnedVector_test()
 end
 
 include("./stat/histotest.jl")

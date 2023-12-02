@@ -23,7 +23,7 @@ export MeanVar,mean,var,WMeanVar
 include("./stat/meanvar.jl")
 
 import Base.range
-export BinnedVector,bin,binc,interval,delta,nbins
+export BinnedVector,ZBinnedVector,bin,binc,interval,delta,nbins
 include("./tool/BinnedVector.jl")
 
 export distance_binning,DistanceBinning

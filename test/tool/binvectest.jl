@@ -23,3 +23,13 @@ function BinnedVector_test()
     A[100.]+=10
     return A.data==BinnedVector_expected
 end
+
+ZBinnedVector_expected=Int[11,5,1,1,2,2,2,2,2,2,2,2,2]
+
+function ZBinnedVector_test()
+    A = ZBinnedVector{Int}(Δ=1.,max=10.,round_max=RoundUp,init=zeros)
+    for x=0:0.5:10. A[x]+=1  end
+    A[-100.]+=5
+    A[100.]+=10
+    return A.data==ZBinnedVector_expected
+end
