@@ -45,10 +45,26 @@ B[-1]
 As an example of use, the [`Histogram`](@ref) type is implemented using `BinnedVector`.
 
 
+### Special treatment of zero
+
+In some cases, like when computing space correlation functions, it is convenient to treat the case `A[0.]` separately from the bin that starts at 0.  This is what the `ZBinnedvector` type does.
+
+```@repl 1
+Z = ZBinnedVector{Int}(Δ=0.2,max=0.5,round_max=RoundUp,init=zeros)
+Z[0.] += 10
+Z[0.1] += 10
+Z[0.15] += 10
+Z
+```
+
+Note that there is no `min` argument in the construction of `ZBinnedvector`, since it is always zero.  In other respects, `ZBinnedvector` behaves like `BinnedVector`, except that bin centres are not equally spaced: the first (pesudo-bin) is at 0, the next bin centre is `delta(Z)/2`, and the rest are `delta(Z)` units apart.
+
+
 ### API
 
 ```@docs
 BinnedVector
+ZBinnedVector
 interval
 delta
 nbins
