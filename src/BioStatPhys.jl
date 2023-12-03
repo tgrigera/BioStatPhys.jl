@@ -29,6 +29,7 @@ export distance_binning,DistanceBinning
 include("./tool/binnings.jl")
 
 export Region, PeriodicRegion, NonPeriodicRegion, Rectangle, PeriodicRectangle
+export dimension, volume, dborder, distancesq
 include("./tool/region.jl")
 
 export Histogram,outliers,area,binc,prob,median,counts

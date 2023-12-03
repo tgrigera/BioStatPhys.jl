@@ -107,6 +107,10 @@ configuration `pos`, with resolution `Δr` and maximum range `rmax`.
 The returned object can be passed to the functions that compute the
 final correlations, such as `rdf`, or more configurations can be added
 to it by calling `density_correlation(::DensityCorrelation,pos)`.
+
+`pos` must be a vector of vectors, i.e. each element of `pos` must be
+a vector of the appropriate dimensionality.  Performance advantage may
+be obtained using `StaticArrays` to represent individual positions.
 """
 function density_correlation(region::PeriodicRectangle,pos,Δr;rmax)
     dcorr = Density_correlation(
@@ -127,7 +131,7 @@ function density_correlation(dcorr::Density_correlation{R},pos) where R <: Perio
     @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
-        r = sqrt(distancesq(dcorr.region,pos[i,:],pos[j,:]))
+        r = sqrt(distancesq(dcorr.region,pos[i],pos[j]))
         dcorr.npr[r] += 2
     end
     dcorr.npr[0.] += dcorr.npart
@@ -169,15 +173,15 @@ function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
     return density_correlation(dcorr,pos)
 end
 
-function density_correlation(dcorr::Density_correlation{NonPeriodicRegion},pos)
+function density_correlation(dcorr::Density_correlation{<:NonPeriodicRegion},pos)
     @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)
-        dbd = dborder(dcorr.region,pos[i,:]...)
+        dbd = dborder(dcorr.region,pos[i])
         lsb=bin(dcorr.npr,dbd)-1
         dcorr.centers[1:lsb] .+= 1
         for j ∈ 1:size(pos,1)
-            r = LinearAlgebra.norm( pos[i,:]-pos[j,:] )
+            r = LinearAlgebra.norm( pos[i]-pos[j] )
             b = bin(dcorr.npr,r)
             if 1 <= b <= lsb
                 dcorr.npr[b] += 1

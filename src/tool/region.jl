@@ -14,6 +14,11 @@
 # For details see the file LICENSE in the root directory, or check
 # <https://www.gnu.org/licenses/>.
 
+"""
+    abstract type Region
+
+Base type for regions.
+"""
 abstract type Region end
 
 ###############################################################################
@@ -25,6 +30,12 @@ abstract type NonPeriodicRegion <: Region end
 
 distance(::NonPeriodicRegion,x::Vector{<:Number},y::Vector{<:Number}) = LinearAlgebra.norm(x.-y)
 
+"""
+    Rectangle <: NonPeriodicRegion
+
+Describes a rectangular non-periodic 2-d region with an arbitrary origin and
+size.
+"""
 struct Rectangle <: NonPeriodicRegion
     x0::Float64   # Origin
     y0::Float64
@@ -32,18 +43,38 @@ struct Rectangle <: NonPeriodicRegion
     Ly::Float64
 end
 
-function Rectangle(pos::Matrix{<:Number})
-    xmin,xmax = extrema(pos[:,1])
-    ymin,ymax = extrema(pos[:,2])
+function Rectangle(pos::AbstractVector)
+    xmin,xmax = extrema(map(x->x[1],pos))
+    ymin,ymax = extrema(map(x->x[2],pos))
     return Rectangle(xmin,ymin,xmax-xmin,ymax-ymin)
 end
 
+"""
+    dimension(r<:Region)
+
+Return the dimension of region `r`, in the sense of dimension of a
+space or a manifold.
+"""
 dimension(::Rectangle) = 2
 
-dborder(r::Rectangle,x,y) = minimum( [x-r.x0, r.x0+r.Lx-x, y-r.y0, r.y0+r.Ly-y] )
+"""
+    dborder(r<:NonPeriodicRegion,p::AbstractVector)
 
+Return the distance from the point `p` (assumed included in region
+`r`) to the nearest border.
+"""
+dborder(r::Rectangle,p::AbstractVector) =
+    minimum( [ p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2]] )
+
+"Return volume of region"
 volume(r::Rectangle) = r.Lx * r.Ly
 
+"""
+    struct CubicBox <: NonPeriodicRegion
+
+Describes a non-periodic 3-d region with cubic symmetry (a
+rectangular prism).
+"""
 struct CubicBox <: NonPeriodicRegion
     x0::Float64   # Origin
     y0::Float64
@@ -53,17 +84,17 @@ struct CubicBox <: NonPeriodicRegion
     Lz::Float64
 end
 
-function CubicBox(pos::Matrix{<:Number})
-    xmin,xmax = extrema(pos[:,1])
-    ymin,ymax = extrema(pos[:,2])
-    zmin,zmax = extrema(pos[:,3])
+function CubicBox(pos::AbstractVector)
+    xmin,xmax = extrema(map(x->x[1],pos))
+    ymin,ymax = extrema(map(x->x[2],pos))
+    zmin,zmax = extrema(map(x->x[3],pos))
     return CubicBox(xmin,ymin,zmin,xmax-xmin,ymax-ymin,zmax-zmin)
 end
 
 dimension(::CubicBox) = 3
 
-dborder(r::CubicBox,x,y,z) =
-    minimum( [x-r.x0, r.x0+r.Lx-x, y-r.y0, r.y0+r.Ly-y, z-r.z0, r.z0+r.Lz-z] )
+dborder(r::CubicBox,p::AbstractVector{<:Number}) =
+    minimum( [p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2], p[3]-r.z0, r.z0+r.Lz-p[3]] )
 
 volume(r::CubicBox) = r.Lx * r.Ly * r.Lz
 
@@ -75,6 +106,11 @@ volume(r::CubicBox) = r.Lx * r.Ly * r.Lz
 
 abstract type PeriodicRegion <: Region end
 
+"""
+    PeriodicRectangle <: PeriodicRegion
+
+Describes periodic rectangular 2-d region with arbitrary size.
+"""
 struct PeriodicRectangle <: PeriodicRegion
     Lx::Float64
     Ly::Float64
@@ -89,9 +125,13 @@ function ddiff(a::Float64,b::Float64,box_length::Float64)
   return temp - box_length*round(temp/box_length)
 end
 
-function distancesq(r::PeriodicRectangle,x::Vector{<:Number},y::Vector{<:Number})
+"""
+    distancesq(r<:PeriodicRegion,x::AbstractVector{<:Number},y::AbstractVector{<:Number})
+
+Return the periodic squared distance between points `x` and `y` in the periodic region `r`
+"""
+function distancesq(r::PeriodicRectangle,x::AbstractVector{<:Number},y::AbstractVector{<:Number})
     dx = ddiff(x[1],y[1],r.Lx)
     dy = ddiff(x[2],y[2],r.Ly)
     return dx*dx + dy*dy
 end
-
