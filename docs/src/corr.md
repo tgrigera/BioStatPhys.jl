@@ -74,6 +74,60 @@ correlation_time_spectral
 ```
 
 
+## Density correlations
+
+Here we consider point-like particles in continuous space.  The (instantaneous) density of a given configuration ``\{\mathbf{r}_i\}`` is
+```math
+\begin{equation*}
+\rho(\mathbf{r}) = \sum_{i=1}^N \delta(\mathbf{r}-\mathbf{r}_i),
+\end{equation*}
+```
+where ``\delta(\mathbf{r})`` is Dirac's delta.  The _density-density correlation function_ is
+```math
+ G(\mathbf{r},\mathbf{r}_0) = \langle \rho(\mathbf{r}_0) \rho(\mathbf{r}_0+\mathbf{r})\rangle = \left\langle \sum_{i,j} \delta(\mathbf{r}_0-\mathbf{r}_i),\delta(\mathbf{r}_0+\mathbf{r}-\mathbf{r}_i) \right\rangle =
+\frac{1}{V} \left\langle \sum_{i,j} \delta(\mathbf{r}-(\mathbf{r}_i-\mathbf{r}_j)) \right\rangle, 
+```
+where the last equality holds for homogeneous systems.  The angle brackets denote an ensemble average, i.e. an average over configurations weighted with the appropriate probability distribution (e.g. Boltzmann's distribution in a physical system in equilibrium).
+
+The routines in this section compute the density-density correlation function and a couple of other, related and very often used, correlation functions, for the case of homogeneous and isotropic systems in several geometries.
+
+The other correlation functions computed are the _radial distribution function_
+```math
+g(r) = \frac{1}{\rho^2}G(r) - \frac{\delta(r)}{4\pi\rho r^2}
+ = \frac{1}{\rho N} \left\langle \sum_{ij} \delta\left( r - r_{ij}\right) \right\rangle.
+```
+and the _correlation integral_
+```math
+ C(r) = \frac{\rho}{N} \int_0^r \!\!G(r')\,dr' = \frac{1}{N^2} \left\langle \sum_{ij} \Theta(r-r_{ij}) \right\rangle,
+```
+where ``\Theta(r)`` is Heavisde's function.
+
+The computation is done in two steps.  First an internal `DensityCorrelation` object is built from a set of configurations, then the desired correlation is computed passing this object.  The first step is slow (``O(N^2)``), while the second is fast.  To build the `DensityCorrelation` object one needs to load one configuration in a vector of vectors and define the region (see [Regions](@ref))
+in which the particles lie, then call `density_correlation`, specifying the desired range and resolution.  If more configurations are available, they can be added by further calls to `density_correlation`.  Finally, the desired correlation function is computed.  For example:
+```julia
+pos = load_conf()
+region = Rectangle(pos)
+dc = density_correlation(region,pos,0.1,rmax=10.)
+while more_confs()
+   pos = load_conf()
+   dc = density_correlation(dc,pos)
+end
+gr, Cr = rdf(pc)
+```
+
+The `DensityCorrelation` object is not altered by calling `rdf` and the like, so that more statics can be added by further calls to `density_correlation`.  Internally, different subtypes of `DensityCorrelation` are used for different regions, so that the different cases are handled correctly.  In particular, for non-periodic regions, the _unweighted Hanisch_ [^4][^1] method is used.
+
+Configurations are interpreted as a vector of vectors, where each element is a vector of the size equal to the dimension of the region being used.  The functions expect `AbstactVector`s, so for example both `Vector{Vector{Float64}` and `Vector{SVector{2,Float64}}` are valid types for a 2-dimensional region, but the latter (using `StaticArrays`) can be much more efficient.
+
+
+### API
+
+```@docs
+density_correlation
+rdf
+```
+
+
 ## Space correlations and correlation length
 
 The space correlation functions of a space-dependent quantity ``a(\mathbf{r})`` are defined as
@@ -143,4 +197,6 @@ correlation_length_r0
      theory. _Physics Reports_ __728,__ 1–62
      (2018). [[DOI](http://dx.doi.org/10.1016/j.physrep.2017.11.003)]
 
-
+[^4]:K. H. Hanisch, Some remarks on estimators of the distribution
+     function of nearest neighbour distance in stationary spatial
+     point processes. _Ser. Stat._ __15__, 409 (1984). [[DOI](http://dx.doi.org/10.1080/02331888408801788)]

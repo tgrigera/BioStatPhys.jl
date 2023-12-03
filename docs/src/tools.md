@@ -82,3 +82,18 @@ The `distance_binning` function takes a series of points in (2- or 3-``d``) spac
 DistanceBinning
 distance_binning
 ```
+
+
+## Regions
+
+Types and functions to describe periodic and non-periodic regions of space.
+
+```@docs
+Region
+Rectangle
+PeriodicRectangle
+dimension
+volume
+dborder
+distancesq
+```
