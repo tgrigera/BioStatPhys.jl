@@ -16,7 +16,16 @@
 
 abstract type Region end
 
-struct Rectangle <: Region
+###############################################################################
+#
+# Non-periodic regions
+#
+
+abstract type NonPeriodicRegion <: Region end
+
+distance(::NonPeriodicRegion,x::Vector{<:Number},y::Vector{<:Number}) = LinearAlgebra.norm(x.-y)
+
+struct Rectangle <: NonPeriodicRegion
     x0::Float64   # Origin
     y0::Float64
     Lx::Float64   # Length
@@ -29,9 +38,40 @@ function Rectangle(pos::Matrix{<:Number})
     return Rectangle(xmin,ymin,xmax-xmin,ymax-ymin)
 end
 
-dborder(r::Rectangle,x::Number,y::Number) = minimum( [x-r.x0, r.x0+r.Lx-x, y-r.y0, r.y0+r.Ly-y] )
+dimension(::Rectangle) = 2
+
+dborder(r::Rectangle,x,y) = minimum( [x-r.x0, r.x0+r.Lx-x, y-r.y0, r.y0+r.Ly-y] )
 
 volume(r::Rectangle) = r.Lx * r.Ly
+
+struct CubicBox <: NonPeriodicRegion
+    x0::Float64   # Origin
+    y0::Float64
+    z0::Float64
+    Lx::Float64   # Length
+    Ly::Float64
+    Lz::Float64
+end
+
+function CubicBox(pos::Matrix{<:Number})
+    xmin,xmax = extrema(pos[:,1])
+    ymin,ymax = extrema(pos[:,2])
+    zmin,zmax = extrema(pos[:,3])
+    return CubicBox(xmin,ymin,zmin,xmax-xmin,ymax-ymin,zmax-zmin)
+end
+
+dimension(::CubicBox) = 3
+
+dborder(r::CubicBox,x,y,z) =
+    minimum( [x-r.x0, r.x0+r.Lx-x, y-r.y0, r.y0+r.Ly-y, z-r.z0, r.z0+r.Lz-z] )
+
+volume(r::CubicBox) = r.Lx * r.Ly * r.Lz
+
+
+###############################################################################
+#
+# Periodic regions
+#
 
 abstract type PeriodicRegion <: Region end
 
@@ -40,6 +80,8 @@ struct PeriodicRectangle <: PeriodicRegion
     Ly::Float64
 end
 
+dimension(::PeriodicRectangle) = 2
+
 volume(r::PeriodicRectangle) = r.Lx * r.Ly
 
 function ddiff(a::Float64,b::Float64,box_length::Float64)
@@ -47,7 +89,7 @@ function ddiff(a::Float64,b::Float64,box_length::Float64)
   return temp - box_length*round(temp/box_length)
 end
 
-function distancesq(r::PeriodicRectangle,x::Number,y::Number)
+function distancesq(r::PeriodicRectangle,x::Vector{<:Number},y::Vector{<:Number})
     dx = ddiff(x[1],y[1],r.Lx)
     dy = ddiff(x[2],y[2],r.Ly)
     return dx*dx + dy*dy

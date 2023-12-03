@@ -22,12 +22,14 @@ import Base.push!,Base.show
 export MeanVar,mean,var,WMeanVar
 include("./stat/meanvar.jl")
 
-import Base.range
-export BinnedVector,ZBinnedVector,bin,binc,interval,delta,nbins
+export BinnedVector,BBinnedVector,ZBinnedVector,bin,binc,interval,delta,nbins
 include("./tool/BinnedVector.jl")
 
 export distance_binning,DistanceBinning
 include("./tool/binnings.jl")
+
+export Region, PeriodicRegion, NonPeriodicRegion, Rectangle, PeriodicRectangle
+include("./tool/region.jl")
 
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
@@ -36,6 +38,7 @@ export time_correlation, correlation_time_spectral
 include("./stat/timecorr.jl")
 
 export space_correlation, correlation_length_r0
+export density_correlation, rdf
 include("./stat/spacecorr.jl")
 
 end

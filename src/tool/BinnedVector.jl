@@ -197,10 +197,10 @@ Base.getindex(A::BBinnedVector{T,SZ},x::Float64) where {T,SZ} =
 Base.getindex(A::BBinnedVector{T,SZ},i::Int) where {T,SZ} =
     A.data[i+2]
 
-Base.setindex!(A::BBinnedVector{T,SZ},value::T,x::Float64) where {T,SZ} =
+Base.setindex!(A::BBinnedVector{T,SZ},value,x::Float64) where {T,SZ} =
     A.data[bin(A,x)+2]=value
 
-Base.setindex!(A::BBinnedVector{T,SZ},value::T,i::Int) where {T,SZ} =
+Base.setindex!(A::BBinnedVector{T,SZ},value,i::Int) where {T,SZ} =
     A.data[i+2]=value
 
 """

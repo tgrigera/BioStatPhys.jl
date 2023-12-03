@@ -77,54 +77,85 @@ function space_correlation(binning::DistanceBinning,X;
 end
 
 
+###############################################################################
 #
-# This must be extended to provide a push-interface 
+# Density correlations
 #
 
-include("../tool/region.jl")
+"""
+    Density_correlation{R<:Region}
 
+Datatype holding information about about pair distribution from which
+the density correlations are computed.  Not to be manipulated
+directly, but objects of this type are returned by the
+`density_correlation` methods, and are taken as argument to compute
+the actual correlation functions, e.g. `rdf`.
+"""
 mutable struct Density_correlation{R<:Region}
     region::R
     npart::Int
     nconf::Int
-    npr::BinnedVector{Int}     # number of pairs at distance r
-    Cnpr::BinnedVector{Int}    # cumulative number of pairs
-    centers::BinnedVector{Int}     # valid centers
+    npr::ZBinnedVector{Int}         # number of pairs at distance r
+    centers::ZBinnedVector{Int}     # valid centers
 end
 
-# function density_correlation_rdf(region::PeriodicRectangle,pos,Δr;rmax=nothing)
-#     rdf = Density_correlation_rdf(
-#         region, 0,
-#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
-#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
-#         BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
-#     )
-#     return density_correlation_rdf(rdf,pos)
-# end
+"""
+    density_correlation(region,pos,Δr;rmax)
 
-# function density_correlation_rdf(rdf::Density_correlation_rdf{R},pos)  where R <: PeriodicRegion
-#     rdf.nconf += 1
-#     for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
-#         r = sqrt(distancesq(rdf.region,pos[i,:],pos[j,:]))
-#         b = bin(rdf.npr,r)
-#         rdf.npr[b] += 2
-#         if b<0 b=nbins(rdf.Cnpr) end
-#         rdf.Cnpr[1:b] .+= 2
-#     end
-#     return rdf
-# end
+Return a `Density_correlation` object for the given `region` and
+configuration `pos`, with resolution `Δr` and maximum range `rmax`.
+The returned object can be passed to the functions that compute the
+final correlations, such as `rdf`, or more configurations can be added
+to it by calling `density_correlation(::DensityCorrelation,pos)`.
+"""
+function density_correlation(region::PeriodicRectangle,pos,Δr;rmax)
+    dcorr = Density_correlation(
+        region, size(pos,1),0,
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
+    )
+    return density_correlation(dcorr,pos)
+end
 
-# function ufa
-#     gr = zeros(Float64,size(binning,1))
-#     gr .= length.(binning)
-#     gr ./= N
-#     Δ = delta(binning)
-#     for (i,r) ∈ enumerate(range(binning))
-#         vol = π * ( (r+Δ)^2 - (r-Δ)^2 )
-#         gr[i] /= vol * Nc
-#     end
-#     return gr
-# end
+"""
+    density_correlation(dcorr::Density_correlation{R},pos) where R <: Region
+
+Use configuration `pos` to add statistics to the `DensityCorrelation`
+object `dcorr`.
+"""
+function density_correlation(dcorr::Density_correlation{R},pos) where R <: PeriodicRegion
+    @assert dcorr.npart==size(pos,1)
+    dcorr.nconf += 1
+    for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
+        r = sqrt(distancesq(dcorr.region,pos[i,:],pos[j,:]))
+        dcorr.npr[r] += 2
+    end
+    dcorr.npr[0.] += dcorr.npart
+    return dcorr
+end
+
+"""
+    rdf(dcorr::Density_correlation{R})
+
+Compute the radial distribution function ``g(r)`` and the correlation
+integral ``C(r)``.  Both are returned as a tuple of `ZBinnedVector`.
+"""
+function rdf(dcorr::Density_correlation{R}) where R <: PeriodicRegion
+    rmax = interval(dcorr.npr)[2]
+    Δ = delta(dcorr.npr)
+    gr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
+    Cr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
+    ρ = dcorr.npart / volume(dcorr.region)
+    for (i,r) ∈ enumerate(range(dcorr.npr))
+        vol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
+        if i==1 continue end
+        gr[i] = dcorr.npr[i] / (ρ * vol * dcorr.npart * dcorr.nconf)
+        Cr[i] = Cr[i-1] + dcorr.npr[i] / (ρ * dcorr.npart * dcorr.nconf)
+   end
+    Cr[2] += dcorr.npr[1] / (ρ * dcorr.centers[1] * dcorr.nconf)  # Because C(r) does not exclude self-correlation
+    Cr ./= volume(dcorr.region)
+    return gr,Cr
+end
 
 function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
     if isnothing(rmax)
@@ -132,47 +163,47 @@ function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
     end
     dcorr = Density_correlation(
         region, size(pos,1),0,
-        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
-        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
-        BinnedVector{Int}(Δ=Δr,min=0.,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
     return density_correlation(dcorr,pos)
 end
 
-function density_correlation(dcorr::Density_correlation{Rectangle},pos)
+function density_correlation(dcorr::Density_correlation{NonPeriodicRegion},pos)
     @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)
-        dbd = dborder(dcorr.region,pos[i,1], pos[i,2])
+        dbd = dborder(dcorr.region,pos[i,:]...)
         lsb=bin(dcorr.npr,dbd)-1
         dcorr.centers[1:lsb] .+= 1
         for j ∈ 1:size(pos,1)
-            if i==j continue end
             r = LinearAlgebra.norm( pos[i,:]-pos[j,:] )
             b = bin(dcorr.npr,r)
             if 1 <= b <= lsb
-                dcorr.Cnpr[1:b] .+= 1
                 dcorr.npr[b] += 1
-            else
-                dcorr.Cnpr .+= 1
             end
         end
     end
     return dcorr
 end
 
-function rdf(dcorr::Density_correlation{R}) where R <: Region
+shell_volume(r,Δ,::Val{2}) = π * ( (r+Δ/2)^2 - (r-Δ/2)^2 )
+shell_volume(r,Δ,::Val{3}) = (4π/3) * ( (r+Δ/2)^3 - (r-Δ/2)^3 )
+
+function rdf(dcorr::Density_correlation{R}) where R <: NonPeriodicRegion
     rmax = interval(dcorr.npr)[2]
     Δ = delta(dcorr.npr)
-    gr = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
-    Cr = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
+    gr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
+    Cr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
     ρ = dcorr.npart / volume(dcorr.region)
     for (i,r) ∈ enumerate(range(dcorr.npr))
-        vol = π * ( (r+Δ/2)^2 - (r-Δ/2)^2 )
-        gr[i] = dcorr.npr[i] / (dcorr.npart * ρ * vol * dcorr.centers[i] * dcorr.nconf)
-        Cr[i] = Cr[i-1] + vol*gr[i]
-        # Cr[i] = rdf.Cnpr[i] / (rdf.centers[i]* rdf.nconf)
-    end
+        vol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
+        if i==1 continue end
+        gr[i] = dcorr.npr[i] / (ρ * vol * dcorr.centers[i] * dcorr.nconf)
+        Cr[i] = Cr[i-1] + dcorr.npr[i] / (ρ * dcorr.centers[i] * dcorr.nconf)
+   end
+    Cr[2] += dcorr.npr[1] / (ρ * dcorr.centers[1] * dcorr.nconf)  # Because C(r) does not exclude self-correlation
+    Cr ./= volume(dcorr.region)
     return gr,Cr
 end
 
