@@ -18,6 +18,8 @@ module BioStatPhys
 
 import Statistics,LinearAlgebra
 
+ConfigurationT = AbstractVector{T} where T<:AbstractVector{W} where W<:Number
+
 import Base.push!,Base.show
 export MeanVar,mean,var,WMeanVar
 include("./stat/meanvar.jl")

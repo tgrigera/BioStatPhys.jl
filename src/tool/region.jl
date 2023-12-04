@@ -28,7 +28,8 @@ abstract type Region end
 
 abstract type NonPeriodicRegion <: Region end
 
-distance(::NonPeriodicRegion,x::Vector{<:Number},y::Vector{<:Number}) = LinearAlgebra.norm(x.-y)
+distance(::NonPeriodicRegion,x::AbstractVector{<:Number},y::AbstractVector{<:Number}) =
+    LinearAlgebra.norm(x.-y)
 
 """
     Rectangle <: NonPeriodicRegion
@@ -43,7 +44,7 @@ struct Rectangle <: NonPeriodicRegion
     Ly::Float64
 end
 
-function Rectangle(pos::AbstractVector)
+function Rectangle(pos::ConfigurationT)
     xmin,xmax = extrema(map(x->x[1],pos))
     ymin,ymax = extrema(map(x->x[2],pos))
     return Rectangle(xmin,ymin,xmax-xmin,ymax-ymin)
@@ -63,7 +64,7 @@ dimension(::Rectangle) = 2
 Return the distance from the point `p` (assumed included in region
 `r`) to the nearest border.
 """
-dborder(r::Rectangle,p::AbstractVector) =
+dborder(r::Rectangle,p::AbstractVector{<:Number}) =
     minimum( [ p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2]] )
 
 "Return volume of region"
@@ -84,7 +85,7 @@ struct CubicBox <: NonPeriodicRegion
     Lz::Float64
 end
 
-function CubicBox(pos::AbstractVector)
+function CubicBox(pos::ConfigurationT)
     xmin,xmax = extrema(map(x->x[1],pos))
     ymin,ymax = extrema(map(x->x[2],pos))
     zmin,zmax = extrema(map(x->x[3],pos))
@@ -120,7 +121,7 @@ dimension(::PeriodicRectangle) = 2
 
 volume(r::PeriodicRectangle) = r.Lx * r.Ly
 
-function ddiff(a::Float64,b::Float64,box_length::Float64)
+function ddiff(a,b,box_length)
   temp = a-b
   return temp - box_length*round(temp/box_length)
 end
