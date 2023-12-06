@@ -100,7 +100,7 @@ mutable struct Density_correlation{R<:Region}
 end
 
 """
-    density_correlation(region,pos,Δr;rmax)
+    density_correlation(region,pos;Δr,rmax)
 
 Return a `Density_correlation` object for the given `region` and
 configuration `pos`, with resolution `Δr` and maximum range `rmax`.
@@ -111,23 +111,27 @@ to it by calling `density_correlation(::DensityCorrelation,pos)`.
 `pos` must be a vector of vectors, i.e. each element of `pos` must be
 a vector of the appropriate dimensionality.  Performance advantage may
 be obtained using `StaticArrays` to represent individual positions.
+More precisely, the type of `pos` is
+
+    AbstractVector{T} where T<:AbstractVector{W} where W<:Number
+
 """
-function density_correlation(region::PeriodicRectangle,pos,Δr;rmax)
+function density_correlation(region::PeriodicRectangle,pos::ConfigurationT;Δr,rmax)
     dcorr = Density_correlation(
         region, size(pos,1),0,
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
-    return density_correlation(dcorr,pos)
+    return density_correlation!(dcorr,pos)
 end
 
 """
-    density_correlation(dcorr::Density_correlation{R},pos) where R <: Region
+    density_correlation!(dcorr::Density_correlation{R},pos) where R <: Region
 
 Use configuration `pos` to add statistics to the `DensityCorrelation`
 object `dcorr`.
 """
-function density_correlation(dcorr::Density_correlation{R},pos) where R <: PeriodicRegion
+function density_correlation!(dcorr::Density_correlation{R},pos::ConfigurationT) where R <: PeriodicRegion
     @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
@@ -161,7 +165,30 @@ function rdf(dcorr::Density_correlation{R}) where R <: PeriodicRegion
     return gr,Cr
 end
 
-function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
+""""
+    densdens(dcorr::Density_correlation{R<:Region})
+
+Compute the density-density correlation function ``G(r)`` from a
+`Density_correlation` object.
+"""
+function densdens(dcorr::Density_correlation{R}) where R <: PeriodicRegion
+    rmax = interval(dcorr.npr)[2]
+    Δ = delta(dcorr.npr)
+    G = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
+    for (i,r) ∈ enumerate(range(dcorr.npr))
+        if i==1 continue end
+        svol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
+        if i==2 
+            G[1] = (dcorr.npr[1] + dcorr.npr[2]) / (svol * dcorr.nconf)
+        else
+            G[i-1] = dcorr.npr[i] / (svol * dcorr.nconf)
+        end
+    end
+    G ./= volume(dcorr.region)
+    return G
+end    
+
+function density_correlation(region::Rectangle,pos::ConfigurationT,Δr;rmax=nothing)
     if isnothing(rmax)
         rmax=LinearAlgebra.norm([region.Lx,region.Ly])
     end
@@ -170,10 +197,10 @@ function density_correlation(region::Rectangle,pos,Δr;rmax=nothing)
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
-    return density_correlation(dcorr,pos)
+    return density_correlation!(dcorr,pos)
 end
 
-function density_correlation(dcorr::Density_correlation{<:NonPeriodicRegion},pos)
+function density_correlation!(dcorr::Density_correlation{<:NonPeriodicRegion},pos::ConfigurationT)
     @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)

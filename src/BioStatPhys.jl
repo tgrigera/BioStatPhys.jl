@@ -41,7 +41,7 @@ export time_correlation, correlation_time_spectral
 include("./stat/timecorr.jl")
 
 export space_correlation, correlation_length_r0
-export density_correlation, rdf
+export density_correlation, density_correlation!, rdf
 include("./stat/spacecorr.jl")
 
 end

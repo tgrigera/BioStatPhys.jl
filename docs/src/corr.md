@@ -103,14 +103,14 @@ and the _correlation integral_
 where ``\Theta(r)`` is Heavisde's function.
 
 The computation is done in two steps.  First an internal `DensityCorrelation` object is built from a set of configurations, then the desired correlation is computed passing this object.  The first step is slow (``O(N^2)``), while the second is fast.  To build the `DensityCorrelation` object one needs to load one configuration in a vector of vectors and define the region (see [Regions](@ref))
-in which the particles lie, then call `density_correlation`, specifying the desired range and resolution.  If more configurations are available, they can be added by further calls to `density_correlation`.  Finally, the desired correlation function is computed.  For example:
+in which the particles lie, then call `density_correlation`, specifying the desired range and resolution.  If more configurations are available, they can be added by calls to `density_correlation!`.  Finally, the desired correlation function is computed.  For example:
 ```julia
 pos = load_conf()
 region = Rectangle(pos)
 dc = density_correlation(region,pos,0.1,rmax=10.)
 while more_confs()
    pos = load_conf()
-   dc = density_correlation(dc,pos)
+   density_correlation!(dc,pos)
 end
 gr, Cr = rdf(pc)
 ```
@@ -124,6 +124,7 @@ Configurations are interpreted as a vector of vectors, where each element is a v
 
 ```@docs
 density_correlation
+density_correlation!
 rdf
 ```
 
