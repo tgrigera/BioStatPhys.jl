@@ -76,7 +76,7 @@ volume(r::Rectangle) = r.Lx * r.Ly
 Describes a non-periodic 3-d region with cubic symmetry (a
 rectangular prism).
 """
-struct CubicBox <: NonPeriodicRegion
+struct Cube <: NonPeriodicRegion
     x0::Float64   # Origin
     y0::Float64
     z0::Float64
@@ -85,20 +85,19 @@ struct CubicBox <: NonPeriodicRegion
     Lz::Float64
 end
 
-function CubicBox(pos::ConfigurationT)
+function Cube(pos::ConfigurationT)
     xmin,xmax = extrema(map(x->x[1],pos))
     ymin,ymax = extrema(map(x->x[2],pos))
     zmin,zmax = extrema(map(x->x[3],pos))
     return CubicBox(xmin,ymin,zmin,xmax-xmin,ymax-ymin,zmax-zmin)
 end
 
-dimension(::CubicBox) = 3
+dimension(::Cube) = 3
 
-dborder(r::CubicBox,p::AbstractVector{<:Number}) =
+dborder(r::Cube,p::AbstractVector{<:Number}) =
     minimum( [p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2], p[3]-r.z0, r.z0+r.Lz-p[3]] )
 
-volume(r::CubicBox) = r.Lx * r.Ly * r.Lz
-
+volume(r::Cube) = r.Lx * r.Ly * r.Lz
 
 ###############################################################################
 #
@@ -107,19 +106,44 @@ volume(r::CubicBox) = r.Lx * r.Ly * r.Lz
 
 abstract type PeriodicRegion <: Region end
 
+using StaticArrays
+
+"""
+    PeriodicHyperCube{D} <: PeriodicRegion
+
+Describes a periodic D-dimensional region.  Actually the size along each
+dimension can be different.
+"""
+struct PeriodicHyperCube{D} <: PeriodicRegion
+    L::SVector{D,Float64}
+end
+
+PeriodicHyperCube{D}(L...) where D = PeriodicHyperCube{D}(SVector(L...))
+
+"Return the dimension of the given periodic region"
+dimension(::PeriodicHyperCube{D}) where D = D
+
+"Return the volume of the given region"
+function volume(r::PeriodicHyperCube{D}) where D
+    vol = 1.
+    for i ∈ 1:D vol *= r.L[i]  end
+    return vol
+end
+
 """
     PeriodicRectangle <: PeriodicRegion
 
-Describes periodic rectangular 2-d region with arbitrary size.
+Describes periodic rectangular 2-d region with arbitrary size.  Alias
+for `PeriodicHyperCube{2}`.
 """
-struct PeriodicRectangle <: PeriodicRegion
-    Lx::Float64
-    Ly::Float64
-end
+PeriodicRectangle = PeriodicHyperCube{2}
 
-dimension(::PeriodicRectangle) = 2
+"""
+    PeriodicCube(Lx,Ly,Lz)
 
-volume(r::PeriodicRectangle) = r.Lx * r.Ly
+Return a periodic cube (actually rectangular cuboid).  Alias for `PeriodicHyperCube{3}`
+"""
+PeriodicCube = PeriodicHyperCube{3}
 
 function ddiff(a,b,box_length)
   temp = a-b
@@ -131,8 +155,12 @@ end
 
 Return the periodic squared distance between points `x` and `y` in the periodic region `r`
 """
-function distancesq(r::PeriodicRectangle,x::AbstractVector{<:Number},y::AbstractVector{<:Number})
-    dx = ddiff(x[1],y[1],r.Lx)
-    dy = ddiff(x[2],y[2],r.Ly)
-    return dx*dx + dy*dy
+function distancesq(r::PeriodicHyperCube{D},x::AbstractVector{<:Number},
+                    y::AbstractVector{<:Number}) where D
+    dsq = 0.
+    for i ∈ 1:D
+        dx = ddiff(x[i],y[i],r.L[i])
+        dsq += dx*dx
+    end
+    return dsq
 end
