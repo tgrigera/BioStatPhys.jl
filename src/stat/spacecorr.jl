@@ -181,7 +181,6 @@ More precisely, the type of `pos` is
     AbstractVector{T} where T<:AbstractVector{W} where W<:Number
 
 """
-#function density_correlation(region::PeriodicRectangle,pos::ConfigurationT;Δr,rmax)
 function density_correlation(region::PeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing)
     if isnothing(rmax)
         rmax = 0.5 * volume(region)^(1/dimension(region))

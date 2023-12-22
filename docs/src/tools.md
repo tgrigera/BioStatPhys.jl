@@ -91,7 +91,7 @@ Types and functions to describe periodic and non-periodic regions of space.
 ```@docs
 Region
 Rectangle
-PeriodicHypercube
+PeriodicHyperCube
 PeriodicRectangle
 PeriodicCube
 dimension
