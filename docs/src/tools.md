@@ -91,7 +91,9 @@ Types and functions to describe periodic and non-periodic regions of space.
 ```@docs
 Region
 Rectangle
+PeriodicHypercube
 PeriodicRectangle
+PeriodicCube
 dimension
 volume
 dborder
