@@ -14,6 +14,8 @@
 # For details see the file LICENSE in the root directory, or check
 # <https://www.gnu.org/licenses/>.
 
+using StaticArrays
+
 """
     abstract type Region
 
@@ -32,23 +34,18 @@ distance(::NonPeriodicRegion,x::AbstractVector{<:Number},y::AbstractVector{<:Num
     LinearAlgebra.norm(x.-y)
 
 """
-    Rectangle <: NonPeriodicRegion
+    HyperCube{D} <: NonPeriodicRegion
 
-Describes a rectangular non-periodic 2-d region with an arbitrary origin and
-size.
+Describes a nonperiodic D-dimensional region delimited by
+perpendicular planes.  Size _and_ origin are arbitrary.  The size
+along each dimension can be different.
 """
-struct Rectangle <: NonPeriodicRegion
-    x0::Float64   # Origin
-    y0::Float64
-    Lx::Float64   # Length
-    Ly::Float64
+struct HyperCube{D} <: NonPeriodicRegion
+    x0::SVector{D,Float64}
+    L::SVector{D,Float64}
 end
 
-function Rectangle(pos::ConfigurationT)
-    xmin,xmax = extrema(map(x->x[1],pos))
-    ymin,ymax = extrema(map(x->x[2],pos))
-    return Rectangle(xmin,ymin,xmax-xmin,ymax-ymin)
-end
+HyperCube{D}(L...;x0) where D = HyperCube{D}(SVector(x0),SVector(L...))
 
 """
     dimension(r<:Region)
@@ -56,7 +53,33 @@ end
 Return the dimension of region `r`, in the sense of dimension of a
 space or a manifold.
 """
-dimension(::Rectangle) = 2
+dimension(::HyperCube{D}) where D = D
+
+"Return the volume of the given region"
+function volume(r::HyperCube{D}) where D
+    vol = 1.
+    for i ∈ 1:D vol *= r.L[i]-r.x0[i]  end
+    return vol
+end
+
+"""
+    Rectangle <: NonPeriodicRegion
+
+Describes a rectangular non-periodic 2-d region with an arbitrary origin and
+size.
+"""
+Rectangle = HyperCube{2}
+
+function HyperCube{D}(pos::ConfigurationT) where D
+    x0 = MVector{D,Float64}(undef)
+    L = MVector{D,Float64}(undef)
+    for i ∈ 1:D
+        x0[i],L[i] = extrema(map(x->x[1],pos))
+        L[i] -= x0[i]
+    end
+    return HyperCube{D}(L...,x0=x0)
+end
+
 
 """
     dborder(r<:NonPeriodicRegion,p::AbstractVector)
@@ -64,11 +87,16 @@ dimension(::Rectangle) = 2
 Return the distance from the point `p` (assumed included in region
 `r`) to the nearest border.
 """
-dborder(r::Rectangle,p::AbstractVector{<:Number}) =
-    minimum( [ p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2]] )
+function dborder(r::HyperCube{D},p::AbstractVector{<:Number}) where D
+    dis = MVector{2*D,Float64}(undef)
+    dis[1:D] .= p .- r.x0
+    dis[D+1:end] .= r.x0 .+ r.L .- p
+    return minimum(dis)
+end
 
-"Return volume of region"
-volume(r::Rectangle) = r.Lx * r.Ly
+dborder(r::Rectangle,p::AbstractVector{<:Number}) =
+    minimum( SVector( p[1]-r.x0[1], r.x0[1]+r.L[1]-p[1], p[2]-r.x0[2], r.x0[2]+r.L[2]-p[2] ) )
+
 
 """
     struct CubicBox <: NonPeriodicRegion
@@ -76,28 +104,10 @@ volume(r::Rectangle) = r.Lx * r.Ly
 Describes a non-periodic 3-d region with cubic symmetry (a
 rectangular prism).
 """
-struct Cube <: NonPeriodicRegion
-    x0::Float64   # Origin
-    y0::Float64
-    z0::Float64
-    Lx::Float64   # Length
-    Ly::Float64
-    Lz::Float64
-end
-
-function Cube(pos::ConfigurationT)
-    xmin,xmax = extrema(map(x->x[1],pos))
-    ymin,ymax = extrema(map(x->x[2],pos))
-    zmin,zmax = extrema(map(x->x[3],pos))
-    return CubicBox(xmin,ymin,zmin,xmax-xmin,ymax-ymin,zmax-zmin)
-end
-
-dimension(::Cube) = 3
+Cube = HyperCube{3}
 
 dborder(r::Cube,p::AbstractVector{<:Number}) =
-    minimum( [p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2], p[3]-r.z0, r.z0+r.Lz-p[3]] )
-
-volume(r::Cube) = r.Lx * r.Ly * r.Lz
+    minimum( SVector( p[1]-r.x0, r.x0+r.Lx-p[1], p[2]-r.y0, r.y0+r.Ly-p[2], p[3]-r.z0, r.z0+r.Lz-p[3] ))
 
 ###############################################################################
 #
@@ -105,8 +115,6 @@ volume(r::Cube) = r.Lx * r.Ly * r.Lz
 #
 
 abstract type PeriodicRegion <: Region end
-
-using StaticArrays
 
 """
     PeriodicHyperCube{D} <: PeriodicRegion
@@ -120,10 +128,8 @@ end
 
 PeriodicHyperCube{D}(L...) where D = PeriodicHyperCube{D}(SVector(L...))
 
-"Return the dimension of the given periodic region"
 dimension(::PeriodicHyperCube{D}) where D = D
 
-"Return the volume of the given region"
 function volume(r::PeriodicHyperCube{D}) where D
     vol = 1.
     for i ∈ 1:D vol *= r.L[i]  end
