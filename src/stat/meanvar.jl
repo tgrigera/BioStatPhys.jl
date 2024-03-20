@@ -70,10 +70,23 @@ function Base.push!(MV::MeanVar,x)
     return MV
 end
 
+Base.push!(MV::MeanVar,X::AbstractVector) = for x ∈ X push!(MV,x) end
+
 "Compute mean estimate (sample mean) from a `MeanVar` object"
 @inline mean(MV::MeanVar) = MV.mean
 "Compute variance estimate (population variance) from a `MeanVar` object"
 @inline var(MV::MeanVar) = MV.pvar/(MV.N-1)
+
+"""
+    empty!(mv)
+
+Clear all data from `MeanVar` or `WMeanVar` object `mv`
+"""
+@inline function Base.empty!(mv::MeanVar)
+    mv.mean = 0.
+    mv.pvar = 0.
+    mv.N = 0
+end
 
 function Base.show(io::IO,mv::MeanVar)
     println(io,"MeanVar object with $(mv.N) datapoints")
@@ -108,6 +121,13 @@ mutable struct WMeanVar
 end
 
 WMeanVar()=WMeanVar(0.,0.,0.,0)
+
+@inline function Base.empty!(mv::WMeanVar)
+    mv.mean = 0.
+    mv.pvar = 0.
+    mv.sumW = 0.
+    mv.N = 0
+end
 
 """
     function push!(WMV::WMeanVar,x)

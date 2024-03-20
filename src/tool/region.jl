@@ -170,3 +170,20 @@ function distancesq(r::PeriodicHyperCube{D},x::AbstractVector{<:Number},
     end
     return dsq
 end
+
+fold!(x::AbstractArray,box::AbstractArray) =
+    for i ∈ eachindex(x) x[i] -= box[i]*floor(x[i]/box[i]) end
+
+"""
+    fold!(r::PeriodicRegion,conf::ConfigurationT)
+
+Translate periodically the positions in configuration `conf` so that
+all of them fall within the bounds of region `r` (i.e. in the
+'original' periodic volume as defined in `r`).
+"""    
+function fold!(r::PeriodicRegion,conf::ConfigurationT)
+    for n ∈ eachindex(conf)
+        fold!(conf[n],r.L)
+    end
+end
+
