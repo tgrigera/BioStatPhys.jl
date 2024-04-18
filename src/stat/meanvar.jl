@@ -58,8 +58,10 @@ MeanVar()=MeanVar(0.,0.,0)
 
 """
     function push!(MV::MeanVar,x)
+    function push!(MV::MeanVar,X::AbstractVector)
 
-Add data point `x` to `MeanVar` object `MV`
+Add data point `x` to `MeanVar` object `MV`.  If `X` is a vector,
+iteratively `push!` all its elements.
 """
 function Base.push!(MV::MeanVar,x)
     MV.N+=1
@@ -87,6 +89,15 @@ Clear all data from `MeanVar` or `WMeanVar` object `mv`
     mv.pvar = 0.
     mv.N = 0
 end
+
+
+"""
+    isempty(mv::MeanVar) -> Bool
+
+Determine whether the `MeanVar` object is empty (has not been fed any
+data via `push!`
+"""
+@inline Base.isempty(mv::MeanVar) = mv.N==0
 
 function Base.show(io::IO,mv::MeanVar)
     println(io,"MeanVar object with $(mv.N) datapoints")
