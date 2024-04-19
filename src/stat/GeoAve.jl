@@ -21,10 +21,9 @@ mutable struct GeoAve
     logwf   ::Float64
     read_fb ::Float64
     mean    ::Vector{MeanVar}
-end
 
-function GeoAve(;t0=0,wfactor=1.5,base=1.)
-    return GeoAve(base,t0,wfactor,log(wfactor),(wfactor-1)/base,MeanVar[])
+    GeoAve(;t0=0,wfactor=1.5,base=1.) =
+        new(base,t0,wfactor,log(wfactor),(wfactor-1)/base,MeanVar[])
 end
 
 function Base.push!(gav::GeoAve,time::Number,e::Number)
