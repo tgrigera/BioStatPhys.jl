@@ -14,6 +14,23 @@
 # For details see the file LICENSE in the root directory, or check
 # <https://www.gnu.org/licenses/>.
 
+"""
+    GeoAve(;t0=0,wfactor=1.5,base=1.)
+
+Return a `GeoAve` object.  This is used to takes pairs of numbers (x,y)
+(through `push(G,x,y)`) and average together all points whose x-coordinate (assume
+it is a time) falls within a window.  The first window starts
+at `t_0` and is of length `base`, successive windows grow
+geometrically by a factor `wfactor`.
+
+The initial time `t0` is handled separately, and values corresponding
+to `t0` are averaged without windowing.
+
+After filling the object with points, use `get_mean` to obtain the
+averages.  `wfactor=1` is supported and handled as a special case.
+`wfactor<1` is not recommended.
+
+"""
 mutable struct GeoAve
     base    ::Float64
     t0      ::Float64
@@ -43,6 +60,15 @@ function Base.push!(gav::GeoAve,time::Number,e::Number)
     return nothing
 end
 
+
+"""
+    get_mean(gav::GeoAve)
+
+Return a tuple `(t,X,v)` of arrays, where `X` holds the average
+of all data over a time window, `v` is the respective variance,
+and `t` gives the centre of the window (except for `t=gav.t0`, which
+is not windowed).
+"""
 function get_mean(gav::GeoAve)
     time = Float64[]
     ave  = Float64[]

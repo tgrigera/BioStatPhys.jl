@@ -56,6 +56,46 @@ var(MV::WMeanVar)
 ```
 
 
+## Mean and variance in growing windows
+
+`GeoAve` is a type to average time series in geometrically growing
+windows.  The `push!` function takes pairs of numbers ``x,y`` and
+averages together all points whose ``x``-coordinate (assume it is a
+time) falls within a window.  The first window starts at ``t_0`` and
+is of length ``b``, successive windows grow geometrically by factor
+``w``.  In other words, window boundaries are located at
+```math
+ t_n = t_0 + b \frac{w^n - 1}{w-1} 
+```
+When returning the averages (`get_mean()`), the  time assigned to the
+average value is the center of the window, i.e. the  abscissas `s_n` are
+```math
+      s_n = t_n + \frac{1}{2} b w^n 
+```
+
+Points may be given in any order, and averages are available at any
+time.  Points can be added after querying for the accumulated mean and
+variance.  The initial time `t0` is handled separately, and values
+corresponding to `t0` are averaged without windowing.
+
+The case ``w=1`` is supported and handled as a special case, yielding
+windows of fixed width equal to ``b``. ``w<1`` is not recommended.
+
+For example:
+```julia
+G = GeoAve(t0=0,wfactor=1.2,base=0.5)
+for i=1:100 push!(G,i*rand(),rand()) end
+t,m,v = get_mean(G)
+```
+
+### API
+
+```@docs
+GeoAve
+get_mean(::GeoAve)
+```
+
+
 ## Histograms
 
 A type for computation of histograms, with track of outliers.  Provides access to bin counts or probabilities.
