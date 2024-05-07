@@ -16,7 +16,8 @@
 
 module BioStatPhys
 
-import Statistics,LinearAlgebra
+import Statistics
+using  LinearAlgebra
 
 ConfigurationT = AbstractVector{T} where T<:AbstractVector{W} where W<:Number
 
@@ -27,13 +28,13 @@ include("./stat/meanvar.jl")
 export BinnedVector,BBinnedVector,ZBinnedVector,bin,binc,interval,delta,nbins
 include("./tool/BinnedVector.jl")
 
-export distance_binning,DistanceBinning
-include("./tool/binnings.jl")
-
 include("./tool/region.jl")
 export Region, PeriodicRegion, NonPeriodicRegion, HyperCube, Rectangle, Cube
 export PeriodicHyperCube, PeriodicRectangle, PeriodicCube
-export dimension, volume, dborder, distancesq, fold!
+export dimension, volume, linear_size, dborder, distancesq, fold!
+
+include("./tool/binnings.jl")
+export distance_binning,DistanceBinning,ZDistanceBinning
 
 export Histogram,outliers,area,binc,prob,median,counts
 include("./stat/Histogram.jl")
@@ -44,7 +45,7 @@ include("./stat/timecorr.jl")
 export GeoAve, get_mean
 include("./stat/GeoAve.jl")
 
-export space_correlation, correlation_length_r0
+export space_correlation, space_correlation!, correlations, correlation_length_r0
 export density_correlation, density_correlation!, rdf
 include("./stat/spacecorr.jl")
 

@@ -45,5 +45,19 @@ function distance_binning(pos,Δr;rmin=0.,rmax=nothing)
     return binning
 end
 
+function distance_binning(region::Region,pos::ConfigurationT,Δr;rmax=nothing)
+    if isnothing(rmax) _,rmax = linear_size(region) end
+    TII=Tuple{Int,Int}
+    binning=ZBinnedVector{Vector{TII}}(Δ=Δr,max=rmax,round_max=RoundUp,
+        init=(x,n)->[TII[] for _=1:n])
+    for i ∈ 1:size(pos,1), j=i:size(pos,1)
+        push!(binning[distance(region,pos[i],pos[j])],(i,j))
+    end
+    return binning
+end
+
 "Alias for a `BinnedVector` of `Vector{Tuple{Int,Int}}`"
 DistanceBinning=BinnedVector{Vector{Tuple{Int,Int}}}
+
+"Alias for a `ZBinnedVector` of `Vector{Tuple{Int,Int}}`"
+ZDistanceBinning=ZBinnedVector{Vector{Tuple{Int,Int}}}

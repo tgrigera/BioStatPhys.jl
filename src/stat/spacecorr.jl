@@ -82,65 +82,156 @@ mutable struct Space_correlation_vectorqty{R<:Region}
     nconf::Int
     npart::Int  # Total number of particles processed (not just particles per config)
     const npairs::ZBinnedVector{Int}         # Number of pairs at given distance
-    const npars_nz::ZBinnedVector{Int}       # Number of pairs with non-zero modulus
+    const npairs_nz::ZBinnedVector{Int}       # Number of pairs with non-zero modulus
     const Cv::ZBinnedVector{Float64}
     const Cs::ZBinnedVector{Float64}
     const Cmod::ZBinnedVector{Float64}
+    bin::ZDistanceBinning
 end
 
-function space_correlation(region,pos,Δr;rmax,connected=false)
+"""
+    space_correlation(region::Region,Δr;rmax=nothing,connected=false)
+    space_correlation(region::Region,pos::ConfigurationT,Δr;rmax=nothing,connected=false)
+
+Build and return a `Space_correlation_vectorqty` object to compute
+space correlations of some vectorial observable.  If `pos` is given, it
+will be assumed that positions will be the same for all configurations,
+and a `DistanceBinning` object will be built to save time later.  If posiitons
+change with every configuration, then omit this argument.
+
+To add data to an object `corr`, call
+
+    space_correlation!(corr,pos,vec)
+
+or
+
+    space_correlation!(corr,vec)
+
+if particles are static.  Correlation functions are obtained calling
+`correlations(corr)`.
+
+"""
+function space_correlation(region::Region,Δr;rmax=nothing,connected=false)
+    if isnothing(rmax)
+        rmax,_ = linear_size(region)
+        if isa(region,PeriodicRegion) rmax /= 2. end
+    end
     scorr = Space_correlation_vectorqty(
         connected, region, 0, 0,
-        ZBinnedVector{Int}(Δ=Δr,rmax=rmax,round_max=RoundUp,init=zeros),
-        ZBinnedVector{Int}(Δ=Δr,rmax=rmax,round_max=RoundUp,init=zeros),
-        ZBinnedVector{Float64}(Δ=Δr,rmax=rmax,round_max=RoundUp,init=zeros),
-        ZBinnedVector{Float64}(Δ=Δr,rmax=rmax,round_max=RoundUp,init=zeros),
-        ZBinnedVector{Float64}(Δ=Δr,rmax=rmax,round_max=RoundUp,init=zeros)
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
+        ZDistanceBinning(Δ=1.,max=1.,round_max=RoundUp)
     )
-    space_correlation(scorr,pos)
+    return scorr
 end
 
-# function space_correlation(Space_correlation_vectorqty{R<:Region},pos)
-#     sv = v ./ norm.(v)
-#     sv = replace(sv,[NaN,NaN]=>missing)
-#     if connected
-#         vmean = Statistics.mean(v)
-#         skp=collect(skipmissing(sv))
-#         if length(skp)>0 smean = Statistics.mean(skp) end
-#         modmean = Statistics.mean(x->norm(x),v)
-#     else
-#         vmean, smean, modmean = [0., 0.], [0.,0.], 0.
-#     end
+function space_correlation!(corr::Space_correlation_vectorqty{R},pos::ConfigurationT,
+    vec::ConfigurationT) where R<:Region
+
+    sv = vec ./ LinearAlgebra.norm.(vec)
+    sv = replace(sv,[NaN,NaN]=>missing)
+    if corr.connected
+        vmean = Statistics.mean(vec)
+        skp=collect(skipmissing(sv))
+        if length(skp)>0 smean = Statistics.mean(skp) end
+        modmean = Statistics.mean(x->LinearAlgebra.norm(x),vec)
+    else
+        vmean, smean, modmean = [0., 0.], [0.,0.], 0.
+    end
     
-#     for i ∈ eachindex(r)
-#         ri = r[i]
-#         vcorr.n0 += 1
-#         vi = v[i] - vmean
-#         vcorr.Cv0 += vi ⋅ vi
-#         if !ismissing(sv[i])
-#             si = sv[i] - smean
-#             vcorr.Cs0 += si ⋅ si
-#             vcorr.ns0 += 1
-#         end
-#         modi = norm(v[i]) - modmean
-#         vcorr.Cmod0 += modi * modi
+    corr.nconf += 1
+    for i ∈ eachindex(pos)
+        corr.npart += 1
+        ri = pos[i]
+        vi = vec[i] - vmean
+        if !ismissing(sv[i]) si = sv[i] - smean end
+        modi = LinearAlgebra.norm(vec[i]) - modmean
 
-#         for j ∈ i+1:size(r, 1)
-#             dr = Float64(norm(r[j] - ri))
-#             vcorr.n[dr] += 2
-#             vj = v[j] - vmean
-#             vcorr.Cv[dr] += 2 * (vi ⋅ vj)
-#             if !ismissing(sv[i]) && !ismissing(sv[j])>0
-#                 vcorr.ns[dr] += 2
-#                 sj = sv[j] - smean
-#                 vcorr.Cs[dr] += 2 * (si ⋅ sj)
-#             end
-#             modj = norm(v[j]) - modmean
-#             vcorr.Cmod[dr] += modi * modj
-#         end
-#     end
+        for j ∈ i:size(pos,1)
+            dr = distance(corr.region,pos[j],ri)
+            corr.npairs[dr] += 1
+            vj = vec[j] - vmean
+            corr.Cv[dr] += vi ⋅ vj
+            if !ismissing(sv[i]) && !ismissing(sv[j])
+                corr.npairs_nz[dr] += 1
+                sj = sv[j] - smean
+                corr.Cs[dr] += si ⋅ sj
+            end
+            modj = LinearAlgebra.norm(vec[j]) - modmean
+            corr.Cmod[dr] += modi * modj
+        end
+    end
 
-# end
+end
+
+function space_correlation(region::Region,pos::ConfigurationT,Δr;rmax=nothing,connected=false)
+    if isnothing(rmax)
+        rmax,_ = linear_size(region)
+        if isa(region,PeriodicRegion) rmax /= 2. end
+    end
+    scorr = space_correlation(region,Δr,rmax=rmax,connected=connected)
+    scorr.bin = distance_binning(region,pos,Δr,rmax=rmax)
+    return scorr
+end
+
+function space_correlation!(corr::Space_correlation_vectorqty{R},
+    vec::ConfigurationT) where R<:Region
+
+    sv = vec ./ LinearAlgebra.norm.(vec)
+    sv = replace(sv,[NaN,NaN]=>missing)
+    if corr.connected
+        vmean = Statistics.mean(vec)
+        skp=collect(skipmissing(sv))
+        if length(skp)>0 smean = Statistics.mean(skp) end
+        modmean = Statistics.mean(x->LinearAlgebra.norm(x),vec)
+    else
+        vmean, smean, modmean = [0., 0.], [0.,0.], 0.
+    end
+    
+    corr.nconf += 1
+    for ib in eachindex(corr.bin)
+        for (i,j) in corr.bin[ib]
+            corr.npairs[ib] += 1
+
+            vi = vec[i] - vmean
+            vj = vec[j] - vmean
+            corr.Cv[ib] += vi ⋅ vj
+
+            if !ismissing(sv[i]) si = sv[i] - smean
+                if !ismissing(sv[j])
+                    corr.npairs_nz[ib] += 1
+                    sj = sv[j] - smean
+                    corr.Cs[ib] += si ⋅ sj
+                end
+            end
+            
+            modi = LinearAlgebra.norm(vec[i]) - modmean
+            modj = LinearAlgebra.norm(vec[j]) - modmean
+            corr.Cmod[ib] += modi * modj
+        end
+    end
+
+end
+
+function correlations(C::Space_correlation_vectorqty{R}; normalize=false) where R<:Region
+    r = collect(range(C.Cv))
+    Cv = C.Cv ./ C.npairs
+    Cs = C.Cs ./ C.npairs_nz
+    Cmod = C.Cmod ./ C.npairs
+
+    if normalize
+        Cv[2:end] ./= Cv[1]
+        Cv[1] = 1.
+        Cs[2:end] ./= Cs[1]
+        Cs[1] = 1.
+        Cmod[2:end] ./= Cmod[1]
+        Cmod[1] = 1.
+    end
+    return r,Cv,Cs,Cmod
+end
 
 ###############################################################################
 #
