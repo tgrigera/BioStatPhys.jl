@@ -216,7 +216,6 @@ first bin center is half the distance between bin centers.
 """
 Base.range(A::BinnedVector{T}) where{T} = range(start=A.min+0.5*A.Δ,step=A.Δ,length=A.nbins)
 
-#struct ZBViter <: AbstractVector{Float64} range end
 struct ZBViter range end
 
 Base.range(A::ZBinnedVector{T}) where{T} =
@@ -224,7 +223,6 @@ Base.range(A::ZBinnedVector{T}) where{T} =
 
 import Base.eltype, Base.show
 
-#Base.first(::ZBViter) = 0.
 Base.eltype(::ZBViter) = Float64
 
 Base.show(io::IO, r::ZBViter) = print(io, "Iterator for ZBinnedVector, [0.,",r.range,"]")

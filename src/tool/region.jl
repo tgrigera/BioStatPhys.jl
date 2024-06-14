@@ -79,7 +79,7 @@ function HyperCube{D}(pos::ConfigurationT) where D
     x0 = MVector{D,Float64}(undef)
     L = MVector{D,Float64}(undef)
     for i ∈ 1:D
-        x0[i],L[i] = extrema(map(x->x[1],pos))
+        x0[i],L[i] = extrema(map(x->x[i],pos))
         L[i] -= x0[i]
     end
     return HyperCube{D}(L...,x0=x0)
