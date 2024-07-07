@@ -249,7 +249,7 @@ the actual correlation functions, e.g. `rdf`.
 """
 mutable struct Density_correlation{R<:Region}
     region::R
-    npart::Int
+    ρ::MeanVar
     nconf::Int
     npr::ZBinnedVector{Int}         # number of pairs at distance r
     centers::ZBinnedVector{Int}     # valid centers
@@ -272,32 +272,38 @@ More precisely, the type of `pos` is
     AbstractVector{T} where T<:AbstractVector{W} where W<:Number
 
 """
-function density_correlation(region::PeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing)
+function density_correlation(region::PeriodicRegion;Δr,rmax=nothing)
     if isnothing(rmax)
         rmax = 0.5 * volume(region)^(1/dimension(region))
     end
     dcorr = Density_correlation(
-        region, size(pos,1),0,
+        region,MeanVar(),0,
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
-    return density_correlation!(dcorr,pos)
+    return dcorr
 end
+
+density_correlation(region::PeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing) =
+    density_correlation!(density_correlation(region,Δr=Δr,rmax=rmax),pos)
 
 """
     density_correlation!(dcorr::Density_correlation{R},pos) where R <: Region
 
 Use configuration `pos` to add statistics to the `DensityCorrelation`
-object `dcorr`.
+object `dcorr`.  The configuration need not have the same number of particles
+as those used previously, but check with functions `rdf` and the like how these
+fluctuations are treated.
 """
 function density_correlation!(dcorr::Density_correlation{R},pos::ConfigurationT) where R <: PeriodicRegion
-    @assert dcorr.npart==size(pos,1)
     dcorr.nconf += 1
-    for i ∈ 1:size(pos,1)-1, j ∈ i+1:size(pos,1)
+    npart = size(pos,1)
+    dcorr.npr[0.] += size(pos,1)
+    for i ∈ 1:npart-1, j ∈ i+1:npart
         r = sqrt(distancesq(dcorr.region,pos[i],pos[j]))
         dcorr.npr[r] += 2
     end
-    dcorr.npr[0.] += dcorr.npart
+    push!(dcorr.ρ,npart/volume(dcorr.region))
     return dcorr
 end
 
@@ -306,20 +312,30 @@ end
 
 Compute the radial distribution function ``g(r)`` and the correlation
 integral ``C(r)``.  Both are returned as a tuple of `ZBinnedVector`.
+
+If the `dcorr` object was fed with configurations with fluctuating
+number of particles, then the radial distribution function will be
+computed using the definition for the grand canonical ensamble (see
+J.-P. Hansen and I. R. McDonald, _Theory of Simple Liquids_, Academic
+Press (2005)).  This may or may not be what you want.  See the online
+documentation of the package for more details.
 """
-function rdf(dcorr::Density_correlation{R}) where R <: PeriodicRegion
+function rdf(dcorr::Density_correlation{R};two_particle_density=false) where R <: PeriodicRegion
     rmax = interval(dcorr.npr)[2]
     Δ = delta(dcorr.npr)
     gr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
     Cr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
-    ρ = dcorr.npart / volume(dcorr.region)
+    ρ = mean(dcorr.ρ)
+    fac = two_particle_density ? volume(dcorr.region) * dcorr.nconf :
+          ρ^2 * volume(dcorr.region) * dcorr.nconf
+    Cr[1] = dcorr.npr[1] / fac  # Because C(r) does not exclude self-correlation
     for (i,r) ∈ enumerate(range(dcorr.npr))
-        vol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
+        vols = shell_volume(r,Δ,Val(dimension(dcorr.region)))
         if i==1 continue end
-        gr[i] = dcorr.npr[i] / (ρ * vol * dcorr.npart * dcorr.nconf)
-        Cr[i] = Cr[i-1] + dcorr.npr[i] / (ρ * dcorr.npart * dcorr.nconf)
-   end
-    Cr[2] += dcorr.npr[1] / (ρ * dcorr.centers[1] * dcorr.nconf)  # Because C(r) does not exclude self-correlation
+        gr[i] = dcorr.npr[i] / (fac * vols)
+        Cr[i] = Cr[i-1] + dcorr.npr[i] / fac
+    end
+    Cr[1] = 0.
     Cr ./= volume(dcorr.region)
     return gr,Cr
 end
@@ -349,10 +365,10 @@ end
 
 function density_correlation(region::NonPeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing)
     if isnothing(rmax)
-        rmax = region.Lx-region.x0
+        rmax = maximum(region.L-region.x0)
     end
     dcorr = Density_correlation(
-        region, size(pos,1),0,
+        region,MeanVar(),0,
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
@@ -360,7 +376,8 @@ function density_correlation(region::NonPeriodicRegion,pos::ConfigurationT;Δr,r
 end
 
 function density_correlation!(dcorr::Density_correlation{<:NonPeriodicRegion},pos::ConfigurationT)
-    @assert dcorr.npart==size(pos,1)
+    npart = size(pos,1)
+    push!(dcorr.ρ,npart/volume(dcorr.region))
     dcorr.nconf += 1
     for i ∈ 1:size(pos,1)
         dbd = dborder(dcorr.region,pos[i])
@@ -385,14 +402,16 @@ function rdf(dcorr::Density_correlation{R}) where R <: NonPeriodicRegion
     Δ = delta(dcorr.npr)
     gr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
     Cr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
-    ρ = dcorr.npart / volume(dcorr.region)
+#    ρ = dcorr.npart / volume(dcorr.region)
+    ρ = mean(dcorr.ρ)
+    Cr[1] = dcorr.npr[1] / (ρ * dcorr.centers[1])  # Because C(r) does not exclude self-correlation
     for (i,r) ∈ enumerate(range(dcorr.npr))
         vol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
         if i==1 continue end
         gr[i] = dcorr.npr[i] / (ρ * vol * dcorr.centers[i])
         Cr[i] = Cr[i-1] + dcorr.npr[i] / (ρ * dcorr.centers[i])
     end
-    Cr[2] += dcorr.npr[1] / (ρ * dcorr.centers[1])  # Because C(r) does not exclude self-correlation
+    Cr[1] = 0.
     Cr ./= volume(dcorr.region)
     return gr,Cr
 end

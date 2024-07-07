@@ -120,6 +120,15 @@ The `DensityCorrelation` object is not altered by calling `rdf` and the like, so
 Configurations are interpreted as a vector of vectors, where each element is a vector of the size equal to the dimension of the region being used.  The functions expect `AbstactVector`s, so for example both `Vector{Vector{Float64}` and `Vector{SVector{2,Float64}}` are valid types for a 2-dimensional region, but the latter (using `StaticArrays`) can be much more efficient.
 
 
+### Fluctuating number of particles
+
+`density_correlation!` accepts configurations with different number of particles.  In this case, `rdf` will compute ``g(r)`` using the definition for the grand canonical ensemble, which for homogeneous systems is [^5]
+```math
+  g(r) = \frac{\rho^{(2)}(r)}{\rho^2}, \qquad \rho^{(2)} = \sum_N p(N) \rho_N^{(2)},
+```
+where ``p(N)`` is the probability of finding a configuration with ``N`` particles, and ``\rho_N^{(2)}(r) = \rho_N^2 g_N(r) = (N/V)^2 g_N(r)``.  Note that this is not the same as averaging ``g(r)`` over configurations.  In particular, for completely uncorrelated systems one gets ``g(r) \to \langle \rho^2\rangle / \left(\langle\rho\rangle\right)^2``, which is equal to one in the grand canonical ensemble in the thermodynamic limit, but is larger than 1 in general.  It is up to you to decide whether you need this or an average over the radial distribution function.
+
+
 ### API
 
 ```@docs
@@ -201,3 +210,9 @@ correlation_length_r0
 [^4]:K. H. Hanisch, Some remarks on estimators of the distribution
      function of nearest neighbour distance in stationary spatial
      point processes. _Ser. Stat._ __15__, 409 (1984). [[DOI](http://dx.doi.org/10.1080/02331888408801788)]
+
+[^5]:J.-P. Hansen and I. R. McDonald, _Theory of Simple Liquids_,
+     Academic Press (2005)
+
+
+
