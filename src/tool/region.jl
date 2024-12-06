@@ -19,16 +19,24 @@ using StaticArrays
 """
     abstract type Region
 
-Base type for regions.
+Base type for D-dimensional regions.
 """
-abstract type Region end
+abstract type Region{D} end
+
+"""
+    dimension(r<:Region)
+
+Return the dimension of region `r`, in the sense of dimension of a
+space or a manifold.
+"""
+dimension(::Region{D}) where D = D
 
 ###############################################################################
 #
 # Non-periodic regions
 #
 
-abstract type NonPeriodicRegion <: Region end
+abstract type NonPeriodicRegion{D} <: Region{D} end
 
 distance(::NonPeriodicRegion,x::AbstractVector{<:Number},y::AbstractVector{<:Number}) =
     LinearAlgebra.norm(x.-y)
@@ -45,20 +53,12 @@ To create a hypercube with side 10 and origin at `x0` do e.g.
     HC = HyperCube{4}(10.,10.,10.,10.,x0=(0.,0.,2.,2.))
 
 """
-struct HyperCube{D} <: NonPeriodicRegion
+struct HyperCube{D} <: NonPeriodicRegion{D}
     x0::SVector{D,Float64}
     L::SVector{D,Float64}
 end
 
 HyperCube{D}(L...;x0) where D = HyperCube{D}(SVector(x0),SVector(L...))
-
-"""
-    dimension(r<:Region)
-
-Return the dimension of region `r`, in the sense of dimension of a
-space or a manifold.
-"""
-dimension(::HyperCube{D}) where D = D
 
 "Return the volume of the given region"
 function volume(r::HyperCube{D}) where D
@@ -71,7 +71,9 @@ end
     Rectangle <: NonPeriodicRegion
 
 Describes a rectangular non-periodic 2-d region with an arbitrary origin and
-size.
+size.  Create with
+
+    rec = Rectangle(Lx,Ly,x0=(x0,y0))
 """
 Rectangle = HyperCube{2}
 
@@ -129,7 +131,7 @@ dborder(r::Cube,p::AbstractVector{<:Number}) =
 # Periodic regions
 #
 
-abstract type PeriodicRegion <: Region end
+abstract type PeriodicRegion{D} <: Region{D} end
 
 """
     PeriodicHyperCube{D} <: PeriodicRegion
@@ -137,7 +139,7 @@ abstract type PeriodicRegion <: Region end
 Describes a periodic D-dimensional region.  Actually the size along each
 dimension can be different.
 """
-struct PeriodicHyperCube{D} <: PeriodicRegion
+struct PeriodicHyperCube{D} <: PeriodicRegion{D}
     L::SVector{D,Float64}
 end
 

@@ -14,6 +14,8 @@
 # For details see the file LICENSE in the root directory, or check
 # <https://www.gnu.org/licenses/>.
 
+import SpecialFunctions
+
 """
     space_correlation(binning::DistanceBinning, X; connected=true, normalized=false, Xmean=nothing)
 
@@ -76,17 +78,25 @@ function space_correlation(binning::DistanceBinning,X;
     return vcat(0,collect(range(binning))),vcat(Cr0,Cr)
 end
 
+mutable struct KSpace_correlation_vectorqty
+    k::AbstractRange{Float64}
+    const Cv::Vector{Float64}
+    const Cs::Vector{Float64}
+    const Cmod::Vector{Float64}
+end
+
 mutable struct Space_correlation_vectorqty{R<:Region}
     connected::Bool
     const region::R
     nconf::Int
     npart::Int  # Total number of particles processed (not just particles per config)
     const npairs::ZBinnedVector{Int}         # Number of pairs at given distance
-    const npairs_nz::ZBinnedVector{Int}       # Number of pairs with non-zero modulus
+    const npairs_nz::ZBinnedVector{Int}      # Number of pairs with non-zero modulus
     const Cv::ZBinnedVector{Float64}
     const Cs::ZBinnedVector{Float64}
     const Cmod::ZBinnedVector{Float64}
     bin::ZDistanceBinning
+    kspacedata::Union{KSpace_correlation_vectorqty,Nothing}
 end
 
 """
@@ -111,20 +121,34 @@ if particles are static.  Correlation functions are obtained calling
 `correlations(corr)`.
 
 """
-function space_correlation(region::Region,Δr;rmax=nothing,connected=false)
+function space_correlation(region::Region,Δr;rmax=nothing,connected=false,kspace=false)
     if isnothing(rmax)
         rmax,_ = linear_size(region)
         if isa(region,PeriodicRegion) rmax /= 2. end
     end
-    scorr = Space_correlation_vectorqty(
+    scorr = Space_correlation_vectorqty{Region}(
         connected, region, 0, 0,
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Float64}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
-        ZDistanceBinning(Δ=1.,max=1.,round_max=RoundUp)
+        ZDistanceBinning(Δ=1.,max=1.,round_max=RoundUp),
+        nothing
     )
+    if kspace 
+        Δk = 2π/rmax
+        kmax = 2π/delta(scorr.npairs)
+        Nk = ceil(Int,kmax/Δk)
+        kcorr = KSpace_correlation_vectorqty(
+            range(start=0,step=Δk,length=Nk),
+            zeros(Float64,Nk),
+            zeros(Float64,Nk),
+            zeros(Float64,Nk)
+        )
+        scorr.kspacedata = kcorr
+
+    end
     return scorr
 end
 
@@ -143,6 +167,14 @@ function space_correlation!(corr::Space_correlation_vectorqty{R},pos::Configurat
     end
     
     corr.nconf += 1
+    N = size(pos,1)
+    Nnz = count(!ismissing,sv)
+    if !isnothing(corr.kspacedata)
+        Ckv = zeros(Float64,length(corr.kspacedata.Cv))
+        Cks = zeros(Float64,length(corr.kspacedata.Cs))
+        Ckmod = zeros(Float64,length(corr.kspacedata.Cmod))
+    end
+
     for i ∈ eachindex(pos)
         corr.npart += 1
         ri = pos[i]
@@ -150,22 +182,62 @@ function space_correlation!(corr::Space_correlation_vectorqty{R},pos::Configurat
         if !ismissing(sv[i]) si = sv[i] - smean end
         modi = LinearAlgebra.norm(vec[i]) - modmean
 
-        for j ∈ i:size(pos,1)
+        corr.npairs[0.] += 1
+        corr.Cv[0.] += vi ⋅ vi
+        if !ismissing(sv[i]) 
+            corr.npairs_nz[0.] += 1
+            corr.Cs[0.] += si ⋅ si
+        end
+        corr.Cmod[0.] += modi * modi
+
+        if !isnothing(corr.kspacedata)
+            Ckv .+= (vi ⋅ vi)
+            Ckmod .+= (modi*modi)
+            if !ismissing(sv[i])
+                Cks .+= (si ⋅ si)
+            end
+        end
+
+        for j ∈ i+1:size(pos,1)
             dr = distance(corr.region,pos[j],ri)
-            corr.npairs[dr] += 1
+            corr.npairs[dr] += 2
             vj = vec[j] - vmean
-            corr.Cv[dr] += vi ⋅ vj
+            corr.Cv[dr] += 2 * vi ⋅ vj
             if !ismissing(sv[i]) && !ismissing(sv[j])
-                corr.npairs_nz[dr] += 1
+                corr.npairs_nz[dr] += 2
                 sj = sv[j] - smean
-                corr.Cs[dr] += si ⋅ sj
+                corr.Cs[dr] += 2 * si ⋅ sj
             end
             modj = LinearAlgebra.norm(vec[j]) - modmean
-            corr.Cmod[dr] += modi * modj
+            corr.Cmod[dr] += 2 * modi * modj
+
+            if !isnothing(corr.kspacedata)
+                kr = dr .* corr.kspacedata.k
+                xx = x->isoexp(x,corr.region)
+                Ckv .+= 2 .* (vi ⋅ vj .* xx.(kr) )
+                Ckmod .+= 2 .* (modi*modj .* xx.(kr) )
+                if !ismissing(sv[i]) && !ismissing(sv[j])
+                    Cks .+= 2 .* (si ⋅ sj .* xx.(kr) )
+                end
+            end
         end
     end
 
+    if !isnothing(corr.kspacedata)
+        corr.kspacedata.Cv .+= Ckv ./ N
+        if Nnz>0 corr.kspacedata.Cs .+= Cks ./ Nnz end
+        corr.kspacedata.Cmod .+= Ckmod ./ N
+    end
+
 end
+
+isoexp(_,::Region{D}) where D = throw(ErrorException("kspace correlation not implemented for dimension $D"))
+
+isoexp(kr,::Region{1}) = exp(im*kr)
+
+isoexp(kr,::Region{2}) = SpecialFunctions.besselj0(kr)
+
+isoexp(kr,::Region{3}) = sinc(kr/π)
 
 function space_correlation(region::Region,pos::ConfigurationT,Δr;rmax=nothing,connected=false)
     if isnothing(rmax)
@@ -230,7 +302,13 @@ function correlations(C::Space_correlation_vectorqty{R}; normalize=false) where 
         Cmod[2:end] ./= Cmod[1]
         Cmod[1] = 1.
     end
-    return r,Cv,Cs,Cmod
+
+    if isnothing(C.kspacedata) return r,Cv,Cs,Cmod end
+    k = collect(C.kspacedata.k)
+    Ckv = C.kspacedata.Cv ./ C.nconf
+    Cks = C.kspacedata.Cs ./ C.nconf
+    Ckmod = C.kspacedata.Cmod ./ C.nconf
+    return (r,Cv,Cs,Cmod),(k,Ckv,Cks,Ckmod)
 end
 
 ###############################################################################
@@ -308,10 +386,18 @@ function density_correlation!(dcorr::Density_correlation{R},pos::ConfigurationT)
 end
 
 """
-    rdf(dcorr::Density_correlation{R})
+    rdf(dcorr::Density_correlation{R};two_particle_density=false)
 
-Compute the radial distribution function ``g(r)`` and the correlation
-integral ``C(r)``.  Both are returned as a tuple of `ZBinnedVector`.
+If `two_particle_density`is `false` (default), compute the radial
+distribution function ``g(r)`` and the correlation integral ``C(r)``.
+Both are returned as a tuple of `ZBinnedVector`.
+
+If `two_particle_density` is `true`, return the density-density
+correlation function ``G(r)`` instead of ``g(r)``.  For the isotropic
+case assumed here, ``G(r) = \\rho^2 g(r) + \\rho \\delta(r)/4\\pi r^2``
+(in 3-d).  Since ``G(r)`` is singular at ``r=0``, here for ``r=0`` we
+return ``\\rho``, i.e. the integral of ``G(r)`` in a very small volume
+around the origin.
 
 If the `dcorr` object was fed with configurations with fluctuating
 number of particles, then the radial distribution function will be
@@ -328,40 +414,18 @@ function rdf(dcorr::Density_correlation{R};two_particle_density=false) where R <
     ρ = mean(dcorr.ρ)
     fac = two_particle_density ? volume(dcorr.region) * dcorr.nconf :
           ρ^2 * volume(dcorr.region) * dcorr.nconf
-    Cr[1] = dcorr.npr[1] / fac  # Because C(r) does not exclude self-correlation
+    Cr[1] = dcorr.npr[1] / dcorr.nconf # Because C(r) does not exclude self-correlation
     for (i,r) ∈ enumerate(range(dcorr.npr))
         vols = shell_volume(r,Δ,Val(dimension(dcorr.region)))
         if i==1 continue end
         gr[i] = dcorr.npr[i] / (fac * vols)
-        Cr[i] = Cr[i-1] + dcorr.npr[i] / fac
+        Cr[i] = Cr[i-1] + dcorr.npr[i] / dcorr.nconf
     end
+    gr[1] = two_particle_density ? ρ : 0.
     Cr[1] = 0.
-    Cr ./= volume(dcorr.region)
+    Cr ./= (ρ*volume(dcorr.region))^2
     return gr,Cr
 end
-
-""""
-    densdens(dcorr::Density_correlation{R<:Region})
-
-Compute the density-density correlation function ``G(r)`` from a
-`Density_correlation` object.
-"""
-function densdens(dcorr::Density_correlation{R}) where R <: PeriodicRegion
-    rmax = interval(dcorr.npr)[2]
-    Δ = delta(dcorr.npr)
-    G = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
-    for (i,r) ∈ enumerate(range(dcorr.npr))
-        if i==1 continue end
-        svol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
-        if i==2 
-            G[1] = (dcorr.npr[1] + dcorr.npr[2]) / (svol * dcorr.nconf)
-        else
-            G[i-1] = dcorr.npr[i] / (svol * dcorr.nconf)
-        end
-    end
-    G ./= volume(dcorr.region)
-    return G
-end    
 
 function density_correlation(region::NonPeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing)
     if isnothing(rmax)
@@ -394,47 +458,31 @@ function density_correlation!(dcorr::Density_correlation{<:NonPeriodicRegion},po
     return dcorr
 end
 
+shell_volume(_,Δ,::Val{1}) = Δ
 shell_volume(r,Δ,::Val{2}) = π * ( (r+Δ/2)^2 - (r-Δ/2)^2 )
 shell_volume(r,Δ,::Val{3}) = (4π/3) * ( (r+Δ/2)^3 - (r-Δ/2)^3 )
 
-function rdf(dcorr::Density_correlation{R}) where R <: NonPeriodicRegion
+function rdf(dcorr::Density_correlation{R};two_particle_density=false) where R <: NonPeriodicRegion
     rmax = interval(dcorr.npr)[2]
     Δ = delta(dcorr.npr)
     gr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
     Cr = ZBinnedVector{Float64}(Δ=Δ,max=rmax,round_max=RoundUp,init=zeros)
-#    ρ = dcorr.npart / volume(dcorr.region)
     ρ = mean(dcorr.ρ)
-    Cr[1] = dcorr.npr[1] / (ρ * dcorr.centers[1])  # Because C(r) does not exclude self-correlation
+    Cr[1] = dcorr.npr[1] /  dcorr.centers[1]  # Because C(r) does not exclude self-correlation
     for (i,r) ∈ enumerate(range(dcorr.npr))
         vol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
         if i==1 continue end
         gr[i] = dcorr.npr[i] / (ρ * vol * dcorr.centers[i])
-        Cr[i] = Cr[i-1] + dcorr.npr[i] / (ρ * dcorr.centers[i])
+        Cr[i] = Cr[i-1] + dcorr.npr[i] / dcorr.centers[i]
+    end
+    if two_particle_density
+        gr .*= ρ^2
+        gr[1] = ρ
     end
     Cr[1] = 0.
-    Cr ./= volume(dcorr.region)
+    Cr ./= (ρ*volume(dcorr.region))^2
     return gr,Cr
 end
-
-# Maybe this has a problem with r=0?
-function densdens(dcorr::Density_correlation{R}) where R <: NonPeriodicRegion
-    rmax = interval(dcorr.npr)[2]
-    Δ = delta(dcorr.npr)
-    G = BinnedVector{Float64}(Δ=Δ,min=0.,max=rmax,round_max=RoundUp,init=zeros)
-    ρ = dcorr.npart / volume(dcorr.region)
-    for (i,r) ∈ enumerate(range(dcorr.npr))
-        if i==1 continue end
-        svol = shell_volume(r,Δ,Val(dimension(dcorr.region)))
-        if i==2 
-            G[1] = ρ * (dcorr.npr[1] + dcorr.npr[2]) /
-                (svol * (dcorr.centers[1] + dcorr.centers[2]) * dcorr.nconf)
-        else
-            G[i-1] = ρ *  dcorr.npr[i] / (svol * dcorr.centers[i] * dcorr.nconf)
-        end
-    end
-    return G
-end    
-
 
 """
     correlation_length_r0(r,C)
