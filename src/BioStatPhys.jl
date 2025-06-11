@@ -31,7 +31,7 @@ include("./tool/BinnedVector.jl")
 include("./tool/region.jl")
 export Region, PeriodicRegion, NonPeriodicRegion, HyperCube, Rectangle, Cube
 export PeriodicHyperCube, PeriodicRectangle, PeriodicCube
-export dimension, volume, linear_size, dborder, distancesq, fold!
+export dimension, volume, linear_size, dborder, distance, distancesq, fold!
 
 include("./tool/binnings.jl")
 export distance_binning,DistanceBinning,ZDistanceBinning

@@ -48,13 +48,20 @@ estimates from a `MeanVar` object are obtained calling `mean` and
 
 See `WMeanVar` for the case of weighted data.
 """
-mutable struct MeanVar
-    mean::Float64
-    pvar::Float64
+mutable struct MeanVar{T<:Real}
+    mean::T
+    pvar::T
     N::Int
 end
 
-MeanVar()=MeanVar(0.,0.,0)
+MeanVar{T}() where T<:Number = MeanVar{T}(0.,0.,0)
+MeanVar() = MeanVar{Float64}()
+
+# mutable struct MeanVar{Complex{T<:Real}}
+#     real::MeanVar{T}
+#     imag::MeanVar{T}
+# end
+
 
 """
     function push!(MV::MeanVar,x)
@@ -63,9 +70,9 @@ MeanVar()=MeanVar(0.,0.,0)
 Add data point `x` to `MeanVar` object `MV`.  If `X` is a vector,
 iteratively `push!` all its elements.
 """
-function Base.push!(MV::MeanVar,x)
+function Base.push!(MV::MeanVar{T},x) where T
     MV.N+=1
-    Q::Float64=x-MV.mean
+    Q::T=x-MV.mean
     R=Q/MV.N
     MV.mean+=R
     MV.pvar+=Q*R*(MV.N-1)

@@ -30,7 +30,7 @@ mutable struct Histogram
     counts::BinnedVector{BigInt}
 end
 
-Histogram(nbins;min::AbstractFloat,max::AbstractFloat) =
+Histogram(nbins;min::Number,max::Number) =
     Histogram(0,BinnedVector{BigInt}(nbins,min=min,max=max,init=zeros))
 
 """
@@ -42,6 +42,8 @@ function push!(his::Histogram,datum::AbstractFloat)
     his.ndata+=1
     his.counts[datum]+=1
 end
+
+push!(his::Histogram,datum::Integer) = push!(his,Float64(datum))
 
 
 """
