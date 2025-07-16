@@ -501,3 +501,35 @@ function correlation_length_r0(r,C)
     else return r[ir]
     end
 end
+
+trapz(f::AbstractVector,h::Number) = h * (sum(f) - (f[begin]+f[end])/2)
+
+"""
+    correlation_length_xi2(r,Cr;dim)
+
+Compute the second moment correlation length from the (real-space)
+correlation function ``C(r)``.  This version expects an isotropic
+(i.e. angle-averaged) ``C(r)`` to be given in `r` and `Cr` as
+real-valued vectors.  `dim` is the dimension of the space where the
+correlation was computed.
+
+"""
+function correlation_length_xi2(r::AbstractVector{<:Number},Cr::AbstractVector{<:Number};
+    dim,fullrange=false)
+    if fullrange
+        @error "Not implemented"
+        return -1
+    end
+
+    h = r[2]-r[1]
+    ir = findfirst(x->x<0,Cr) - 1
+    r0 = r[ir] - Cr[ir]*(r[ir+1]-r[ir])/(Cr[ir+1]-Cr[ir])
+    if ir == 1 return r0 end
+    x = r[1:ir]
+    fx = Cr[1:ir]
+    I1 = trapz(x.^(dim+1).*fx,h)
+    I2 = trapz(x.^(dim-1).*fx,h)
+    I1 += r[ir]^(dim+1)*Cr[ir]*(r0-r[ir])/2
+    I2 += r[ir]^(dim-1)*Cr[ir]*(r0-r[ir])/2
+    return sqrt(I1/I2)
+end
