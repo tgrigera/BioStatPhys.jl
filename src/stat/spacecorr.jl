@@ -508,19 +508,14 @@ trapz(f::AbstractVector,h::Number) = h * (sum(f) - (f[begin]+f[end])/2)
     correlation_length_xi2(r,Cr;dim)
 
 Compute the second moment correlation length from the (real-space)
-correlation function ``C(r)``.  This version expects an isotropic
+correlation function ``C(r)``.  It expects an isotropic
 (i.e. angle-averaged) ``C(r)`` to be given in `r` and `Cr` as
 real-valued vectors.  `dim` is the dimension of the space where the
-correlation was computed.
-
+correlation was computed.  The correlation length is computed
+performing the integral up to the first zero of ``C(r)``.
 """
 function correlation_length_xi2(r::AbstractVector{<:Number},Cr::AbstractVector{<:Number};
-    dim,fullrange=false)
-    if fullrange
-        @error "Not implemented"
-        return -1
-    end
-
+    dim)
     h = r[2]-r[1]
     ir = findfirst(x->x<0,Cr) - 1
     r0 = r[ir] - Cr[ir]*(r[ir+1]-r[ir])/(Cr[ir+1]-Cr[ir])
@@ -531,5 +526,23 @@ function correlation_length_xi2(r::AbstractVector{<:Number},Cr::AbstractVector{<
     I2 = trapz(x.^(dim-1).*fx,h)
     I1 += r[ir]^(dim+1)*Cr[ir]*(r0-r[ir])/2
     I2 += r[ir]^(dim-1)*Cr[ir]*(r0-r[ir])/2
+    return sqrt(I1/I2)
+end
+
+"""
+    correlation_length_xi2(r::AbstractVector{<:Number},Cr::AbstractVector{<:Number},
+                           rng::AbstractRange;dim)
+
+Compute the second moment correlation length as in
+`correlation_length_xi2(r,Cr;dim)` but performing the integral in the
+given range `rng`.
+"""
+function correlation_length_xi2(r::AbstractVector{<:Number},Cr::AbstractVector{<:Number},
+    rng::AbstractRange;dim)
+    h = r[2]-r[1]
+    x = r[rng]
+    fx = Cr[rng]
+    I1 = trapz(x.^(dim+1).*fx,h)
+    I2 = trapz(x.^(dim-1).*fx,h)
     return sqrt(I1/I2)
 end
