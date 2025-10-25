@@ -84,7 +84,7 @@ Base.push!(MV::MeanVar,X::AbstractVector) = for x ∈ X push!(MV,x) end
 "Compute mean estimate (sample mean) from a `MeanVar` object"
 @inline mean(MV::MeanVar) = MV.mean
 "Compute variance estimate (population variance) from a `MeanVar` object"
-@inline var(MV::MeanVar) = MV.pvar/(MV.N-1)
+@inline var(MV::MeanVar;corrected::Bool=true) = MV.pvar/(MV.N - Int(corrected))
 
 """
     empty!(mv)
@@ -166,7 +166,8 @@ end
 "Compute mean estimate (sample mean) from a `WMeanVar` object"
 @inline mean(MV::WMeanVar) = MV.mean
 "Compute variance estimate (population variance) from a `WMeanVar` object"
-@inline var(MV::WMeanVar) = MV.pvar*MV.N/(MV.sumW*(MV.N-1))
+@inline var(MV::WMeanVar;corrected::Bool=true) = MV.pvar*MV.N/(MV.sumW*(MV.N - Int(corrected)))
+
 
 function Base.show(io::IO,wmv::WMeanVar)
     println(io,"WMeanVar object with $(wmv.N) datapoints")
