@@ -427,17 +427,20 @@ function rdf(dcorr::Density_correlation{R};two_particle_density=false) where R <
     return gr,Cr
 end
 
-function density_correlation(region::NonPeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing)
+function density_correlation(region::NonPeriodicRegion;Δr,rmax=nothing)
     if isnothing(rmax)
-        rmax = maximum(region.L-region.x0)
+        rmax = 0.5 * volume(region)^(1/dimension(region))
     end
     dcorr = Density_correlation(
         region,MeanVar(),0,
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros),
         ZBinnedVector{Int}(Δ=Δr,max=rmax,round_max=RoundUp,init=zeros)
     )
-    return density_correlation!(dcorr,pos)
+    return dcorr
 end
+
+density_correlation(region::NonPeriodicRegion,pos::ConfigurationT;Δr,rmax=nothing) =
+    density_correlation!(density_correlation(region,Δr=Δr,rmax=rmax),pos)
 
 function density_correlation!(dcorr::Density_correlation{<:NonPeriodicRegion},pos::ConfigurationT)
     npart = size(pos,1)
