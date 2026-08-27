@@ -49,4 +49,6 @@ export space_correlation, space_correlation!, correlations, correlation_length_r
 export density_correlation, density_correlation!, rdf
 include("./stat/spacecorr.jl")
 
+include("./stat/utest.jl")
+
 end
