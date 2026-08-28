@@ -111,3 +111,60 @@ counts
 prob
 median
 ```
+
+
+## Mann-Whitney test
+
+The Mann-Whitney test is designed to check for an "effect" of the
+variation of some experimental condition on the experimental result.
+This test assumes a real variable is measured under "control" and
+"experimental" conditions several times in two groups of otherwise identical
+experiments.  The aim is to establish to what degree the variable
+measured under experimental conditions is likely to exceed the value
+measured under control conditions.
+
+The version of the test implemented here is Bayesian, basically meaning that one asks how the probability distribution of the quantity of interest changes after we know the experimental result.  The quantity of interest of here is ``\Theta``, namely the probability that a random experimental observation ``X_E`` will be larger than a random control observation ``X_C``,
+```math
+    \Theta = P(X_E > X_C).
+```
+If ``\Theta>1/2`` then the experimental conditions are likely to
+yield higher values of ``X`` than the control conditions.
+
+One starts from a _prior_ probability distribution, which encodes what one knows or expects about the quantity before the experiment; here we assume a flat prior, i.e. a uniform distribution over the interval ``[0,1]`` for ``\Theta``, expressing the fact that we know nothing before the experiment is done.  The experimental data then allows computation of the _posterior_ probability ``P(\Theta | U_E)``, i.e. the distribution of ``\Theta``, given the value ``U_E`` (the number of times the experiment exceeds control) determined in the experiment.  The method also needs the _likelihood_ ``P(U_E|\Theta)``, i.e. the probability of measuring ``U_E`` for a
+given value of ``\Theta``.  This is computed either through a Monte
+Carlo or with an analytical approximation, as discussed by Chechile (2020).
+
+The output of the test is the posterior ``P(\Theta | U_E)``, as well as the median and the confidence or credibility interval (the interval encompassing 95% of the probability around the median).
+
+Example usage:
+
+```julia
+using Distributions
+using GLMakie
+using BioStatPhys
+using Random
+
+rng = Random.Xoshiro(260833)
+
+XC = rand(rng,12)   # Results of the "control" experiment
+XE = rand(rng,7)    # Results of the "experimental" experiment
+
+r = BioStatPhys.Bayesian_U_test(XC,XE,rng=rng,method=:MC)
+
+fig = Figure()
+ax = Axis(fig[1,1], xlabel="Θ",ylabel="P(Θ|U)")
+lines!(ax,r.Θbins,r.PΘ_U./(r.Θbins[2]-r.Θbins[1]))
+display(fig)
+```
+
+
+#### Reference
+
+- Richard A. Chechile, _Bayesian Statistics for Experimental
+   Scientists,_ MIT Press, Cambdrige, MA (2020), Chapter 7.
+
+### API
+
+```@docs
+Bayesian_U_test
+```

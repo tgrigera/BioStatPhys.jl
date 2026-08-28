@@ -50,5 +50,6 @@ export density_correlation, density_correlation!, rdf
 include("./stat/spacecorr.jl")
 
 include("./stat/utest.jl")
+export Bayesian_U_test
 
 end
