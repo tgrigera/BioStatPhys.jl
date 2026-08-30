@@ -78,7 +78,7 @@ The method is by R. A. Chechile,
 which is also inspiration for the code. 
 
 """
-function Bayesian_U_test_MC(UE,nC,nE;bins=200,rng=Random.default_rng())
+function Bayesian_U_test_MC(UE,nC,nE,PΘ=nothing;bins=200,rng=Random.default_rng())
 
     Δ = 1/bins
     Θbins = range(start=Δ/2,stop=1-Δ/2,length=bins)
@@ -87,8 +87,7 @@ function Bayesian_U_test_MC(UE,nC,nE;bins=200,rng=Random.default_rng())
     XC=zeros(Float64,nC)
     uexp = Exponential(1)
 
-    # Compute the likelihood P(U|Θ).  The prior is taken flat (uniform in [0,1]).
-    # It is stored in the same vector that will hold the posterior
+    # Compute the likelihood P(U|Θ) (in the same vector that will hold the posterior)
     for j ∈ 1:bins
         Θ = Θbins[j]
         kΘ = Θ / (1 − Θ)   # this is scale, not rate, i.e. 1/rate
@@ -107,7 +106,11 @@ function Bayesian_U_test_MC(UE,nC,nE;bins=200,rng=Random.default_rng())
             end
         end
     end
-    PΘ_U ./= sum(PΘ_U) # Normalize.  Since the prior is uniform, this is now the posterior P(Θ|U_E)
+
+    # If a prior is given, use it for the posterior, otherwise do nothing since
+    # the default prior is uniform and only needs normalization
+    if !(PΘ === nothing)  PΘ_U .*= PΘ end
+    PΘ_U ./= sum(PΘ_U) # Normalize
 
     return (;Θbins, PΘ_U) 
 end
@@ -237,7 +240,9 @@ Returns: a tuple with
 
  - `PΘ_U`: the posterior ``P(\\Theta | U_E)`` (a vector if the method
    was Monte Carlo, a `Beta` object from `Distributions` if the
-   analytical approximation was used).
+   analytical approximation was used).  __Note__ that if the posterior
+   is a vector, it is not a probability density but the probability
+   for all ``\\Theta`` in the corresponding bin.
 
  - `Θbins`: a range given the ``\\Theta`` values corresponding to the
    `PΘ_U` vector.  It is returned but arbitrary if `PΘ_U` is a `Beta`
@@ -257,8 +262,8 @@ The method, as well as inspiration for the code, come from
    Scientists,_ MIT Press, Cambdrige, MA (2020), Chapter 7.
 
 """
-function Bayesian_U_test(XC::Vector{<:Real},XE::Vector{<:Real}; method=nothing,
-    rng=Random.default_rng())
+function Bayesian_U_test(XC::Vector{<:Real},XE::Vector{<:Real},PΘ=nothing;
+    method=nothing,rng=Random.default_rng())
 
     UC, UE = compute_UC_UE(XC,XE)
     nC, nE = length(XC), length(XE)
@@ -268,19 +273,20 @@ function Bayesian_U_test(XC::Vector{<:Real},XE::Vector{<:Real}; method=nothing,
 
     if method == :MC
 
-        r = Bayesian_U_test_MC(UE,nC,nE,bins=200,rng=rng)
+        r = Bayesian_U_test_MC(UE,nC,nE,PΘ,bins=200,rng=rng)
         FΘ_U = cumsum(r.PΘ_U)  # cumulative distribution
-        i = findlast(x->x<=0.5,FΘ_U)
+        i = findlast(x->x<0.5,FΘ_U)
         Θbins = r.Θbins
-        Θm = (Θbins[i]+Θbins[i])/2
-        i0 = findlast(x->x<=0.025,FΘ_U)
-        i1 = findlast(x->x<=0.975,FΘ_U)
-        Θc = ( (Θbins[i0]+Θbins[i0])/2, (Θbins[i1]+Θbins[i1])/2 )
+        Θm = (Θbins[i]+Θbins[i+1])/2
+        i0 = findlast(x->x<0.025,FΘ_U)
+        i1 = findlast(x->x<0.975,FΘ_U)
+        Θc = ( (Θbins[i0]+Θbins[i0+1])/2, (Θbins[i1]+Θbins[i1+1])/2 )
         PH1 = 1−FΘ_U[end÷2]  # probability for E>C
 
     else
 
-        r = Bayesian_U_test_beta(UE,nC,nE)
+        pα, pβ = PΘ === nothing ? (1.,1.) : params(PΘ)
+        r = Bayesian_U_test_beta(UE,nC,nE,prior_α=pα,prior_β=pβ)
         Δ = 1/200
         Θbins = range(start=Δ/2,stop=1-Δ/2,length=200)
         Θm = Distributions.median(r.PΘ_U)
