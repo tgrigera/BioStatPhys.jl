@@ -130,7 +130,7 @@ The version of the test implemented here is Bayesian, basically meaning that one
 If ``\Theta>1/2`` then the experimental conditions are likely to
 yield higher values of ``X`` than the control conditions.
 
-One starts from a _prior_ probability distribution, which encodes what one knows or expects about the quantity before the experiment; here we assume a flat prior, i.e. a uniform distribution over the interval ``[0,1]`` for ``\Theta``, expressing the fact that we know nothing before the experiment is done.  The experimental data then allows computation of the _posterior_ probability ``P(\Theta | U_E)``, i.e. the distribution of ``\Theta``, given the value ``U_E`` (the number of times the experiment exceeds control) determined in the experiment.  The method also needs the _likelihood_ ``P(U_E|\Theta)``, i.e. the probability of measuring ``U_E`` for a
+One starts from a _prior_ probability distribution, which encodes what one knows or expects about the quantity before the experiment; here the user can give a prior for ``\Theta``, or by default a flat prior (i.e. a uniform distribution over the interval ``[0,1]``) will be taken, expressing the fact that we know nothing before the experiment is done.  The experimental data then allows computation of the _posterior_ probability ``P(\Theta | U_E)``, i.e. the distribution of ``\Theta``, given the value ``U_E`` (the number of times the experiment exceeds control) determined in the experiment.  The method also needs the _likelihood_ ``P(U_E|\Theta)``, i.e. the probability of measuring ``U_E`` for a
 given value of ``\Theta``.  This is computed either through a Monte
 Carlo or with an analytical approximation, as discussed by Chechile (2020).
 

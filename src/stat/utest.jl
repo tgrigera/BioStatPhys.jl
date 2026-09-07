@@ -40,7 +40,7 @@ function compute_UC_UE(control,experiment)
 end
 
 """
-    Bayesian_U_test_MC(UE,nC,nE;bins=200,rng=Random.default_rng())
+    Bayesian_U_test_MC(UE,nC,nE,PΘ=nothing; bins=200,rng=Random.default_rng())
 
 Perform a Bayesian-style Mann-Whitney test, computing the likelihood
 ``P(U_E|\\Theta)`` by a Monte Carlo method, dividing the unit interval
@@ -59,6 +59,9 @@ Arguments:
  - `nE`: number of "experimerimental" observations ``n_E``.
 
  - `nC`: number of "control" observations ``n_C``.
+
+ - `PΘ`: the prior (must be a vector, respecting the binning requested
+    with `bins`).  If `nothing`, it will be taken flat in ``[0,1]``.
 
  - `bins`: number of bins to use to generate the likelihood with Monte
     Carlo.
@@ -131,8 +134,8 @@ Arguments:
 
  - `nC`: number of "control" observations ``n_C``.
 
- - `prior_α`, `prior_β` (optional): Values of the ``\alpha`` and
-   ``\\beta`` parameters of the ``\beta`` distribution used as prior.
+ - `prior_α`, `prior_β` (optional): Values of the ``\\alpha`` and
+   ``\\beta`` parameters of the ``\\beta`` distribution used as prior.
    Default is to take a flat (uniform) prior over ``[0,1]``,
    i.e. ``\alpha=\beta=1``.
 
@@ -182,8 +185,8 @@ function Bayesian_U_test_beta(UE,nC,nE;prior_α=1.,prior_β=1.)
 end
 
 """
-    Bayesian_U_test(XC::Vector{<:Real},XE::Vector{<:Real}; method=nothing,
-                    rng=Random.default_rng())
+    Bayesian_U_test(XC::Vector{<:Real},XE::Vector{<:Real},PΘ=nothing;
+                    method=nothing,rng=Random.default_rng())
 
 Perform a Bayesian-style Mann-Whitney test.  This test assumes a real
 variable is measured under "control" and "experimental" conditions
@@ -217,6 +220,11 @@ Arguments:
  - `XC`: Vector of points measured under _control_ conditions
 
  - `XE`: Vector of points measured under _experimental_ conditions
+
+ - `PΘ`: The prior (default `nothing` means flat prior).  Either a
+   vector or a `Beta` distribution object, i.e. the same format the
+   requested method (`:MC` or `:analytical`) uses to return the
+   posterior.
 
  - `method`: specify `:MC` for the Monte Carlo method, or
    `:analytical` for the analytical approximation to the likelihood.
